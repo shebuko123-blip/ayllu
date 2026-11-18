@@ -19,3 +19,6 @@ node_modules/
 # Archivos de trabajo
 *.tmp
 ~$*
+
+# Páginas de prueba locales (capturas automáticas)
+pages/_*.html

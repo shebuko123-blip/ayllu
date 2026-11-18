@@ -2,20 +2,242 @@
 <html lang="es-PE">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Demo · AYLLU</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Inicio · AYLLU</title>
+  <meta name="description" content="AYLLU: acompañamiento en la crianza para abuelos que crían a sus nietos mientras los padres trabajan lejos.">
+  <meta name="theme-color" content="#FBF5EC">
+
+  <!-- Aplica el tamaño de letra y el contraste antes de pintar, para que la página no parpadee (HU41, HU42) -->
+  <script>
+    (function () {
+      var raiz = document.documentElement;
+      try {
+        var datos = JSON.parse(localStorage.getItem('ayllu:v1') || 'null');
+        var pref = datos && datos.preferencias;
+        if (pref && pref.tamanoLetra && pref.tamanoLetra !== 'normal') raiz.dataset.textSize = pref.tamanoLetra;
+        var alto = pref ? pref.altoContraste : matchMedia('(prefers-contrast: more)').matches;
+        if (alto) raiz.dataset.contrast = 'alto';
+      } catch (e) { /* sin almacenamiento: valores por defecto */ }
+    })();
+  </script>
+
   <link rel="icon" href="../favicon.ico" sizes="any">
   <link rel="icon" href="../assets/images/logo-simbolo.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Fraunces:opsz,wght,SOFT@9..144,600,50&display=swap">
   <link rel="stylesheet" href="../css/styles.css">
+  <script type="module" src="../js/main.js"></script>
 </head>
 <body>
-  <!-- Página provisional de la fase 0: comprueba que GitHub Pages sirve los recursos. Se reemplaza en la fase 1 (app) y la fase 8 (landing). -->
-  <main>
-    <img src="../assets/images/logo-simbolo.svg" alt="" width="64" height="64">
-    <h1>ayllu</h1>
-    <p>En construcción.</p>
-    <p><a href="index.html">Volver a la presentación</a></p>
-  </main>
-  <script type="module" src="../js/main.js"></script>
+  <a class="saltar" href="#contenido">Saltar al contenido</a>
+
+  <div class="app">
+    <header class="barra" id="barra">
+      <div class="barra__fila">
+        <a class="logo" href="#/inicio">
+          <img src="../assets/images/logo-simbolo.svg" alt="" width="32" height="32">
+          <span>ayllu</span>
+        </a>
+
+        <nav class="secciones" aria-label="Secciones">
+          <ul class="secciones__lista">
+            <li><a class="seccion" href="#/inicio" data-seccion="inicio"><svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-home"></use></svg><span>Inicio</span></a></li>
+            <li><a class="seccion" href="#/situaciones" data-seccion="situaciones"><svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-list"></use></svg><span>Situa&shy;ciones</span></a></li>
+            <li><a class="seccion" href="#/acuerdos" data-seccion="acuerdos"><svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-writing"></use></svg><span>Acuer&shy;dos</span></a></li>
+            <li><a class="seccion" href="#/familia" data-seccion="familia"><svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-users"></use></svg><span>Fami&shy;lia</span></a></li>
+            <li class="li-registrar">
+              <a class="registrar-inferior" href="#/situaciones/nueva" data-hu="HU09 HU10">
+                <span class="registrar-inferior__circulo"><svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-plus"></use></svg></span>
+                <span>Regis&shy;trar</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+
+        <a class="boton boton--primario registrar-barra" href="#/situaciones/nueva" data-hu="HU09 HU10">
+          <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-plus"></use></svg>
+          Registrar situación
+        </a>
+
+        <div class="acciones">
+          <button type="button" class="boton-barra" id="boton-aa" popovertarget="panel-aa" aria-controls="panel-aa" aria-expanded="false" data-hu="HU41 HU42">
+            <span class="boton-aa__letras" aria-hidden="true">Aa</span>
+            <span class="boton-barra__texto">Letra<span class="visualmente-oculto"> y contraste</span></span>
+          </button>
+          <button type="button" class="boton-barra" id="boton-avisos" popovertarget="panel-avisos" aria-controls="panel-avisos" aria-expanded="false">
+            <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-bell"></use></svg>
+            <span class="boton-barra__texto">Avisos</span>
+            <span class="contador" id="contador-avisos"></span>
+          </button>
+          <button type="button" class="boton-barra" id="boton-ayuda" aria-haspopup="dialog">
+            <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-help"></use></svg>
+            <span class="boton-barra__texto">Ayuda</span>
+          </button>
+          <button type="button" class="boton-barra" id="boton-persona" popovertarget="panel-persona" aria-controls="panel-persona" aria-expanded="false">
+            <span class="avatar" id="avatar-persona" aria-hidden="true"></span>
+            <span class="boton-barra__texto"><span id="nombre-persona"></span><span class="visualmente-oculto">: menú de la persona</span></span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Botón flotante en tablet; en escritorio está en la barra y en móvil, al centro de la barra inferior -->
+    <a class="boton boton--primario registrar-flotante" href="#/situaciones/nueva" data-hu="HU09 HU10">
+      <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-plus"></use></svg>
+      Registrar situación
+    </a>
+
+    <main id="contenido" tabindex="-1">
+      <p class="texto-suave">Cargando AYLLU…</p>
+    </main>
+  </div>
+
+  <!-- Panel Aa: tamaño de letra, alto contraste y lectura en voz alta (HU41, HU42, HU43) -->
+  <dialog class="panel" id="panel-aa" popover="auto" aria-labelledby="panel-aa-titulo" data-hu="HU41 HU42 HU43">
+    <div class="panel__cabecera">
+      <h2 id="panel-aa-titulo">Letra y contraste</h2>
+      <button type="button" class="boton-barra" popovertarget="panel-aa" popovertargetaction="hide">
+        <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-x"></use></svg>
+        <span class="visualmente-oculto">Cerrar</span>
+      </button>
+    </div>
+
+    <div class="panel__seccion" data-hu="HU41">
+      <fieldset class="opciones-letra" id="opciones-letra">
+        <legend class="panel__titulo leyenda">Tamaño de la letra</legend>
+        <label class="opcion-letra">
+          <input type="radio" name="tamano-letra" value="normal">
+          <span class="opcion-letra__caja"><span class="opcion-letra__muestra opcion-letra__muestra--normal">Aa</span><span class="opcion-letra__nombre">Normal</span></span>
+        </label>
+        <label class="opcion-letra">
+          <input type="radio" name="tamano-letra" value="grande">
+          <span class="opcion-letra__caja"><span class="opcion-letra__muestra opcion-letra__muestra--grande">Aa</span><span class="opcion-letra__nombre">Grande</span></span>
+        </label>
+        <label class="opcion-letra">
+          <input type="radio" name="tamano-letra" value="muy-grande">
+          <span class="opcion-letra__caja"><span class="opcion-letra__muestra opcion-letra__muestra--muy-grande">Aa</span><span class="opcion-letra__nombre">Muy grande</span></span>
+        </label>
+      </fieldset>
+      <p class="campo__ayuda">El cambio se ve al instante en todas las pantallas y se guarda para la próxima vez.</p>
+    </div>
+
+    <div class="panel__seccion" data-hu="HU42">
+      <label class="interruptor">
+        <span>
+          Alto contraste
+          <span class="interruptor__estado" id="estado-contraste">Desactivado</span>
+        </span>
+        <input type="checkbox" role="switch" id="interruptor-contraste" aria-describedby="estado-contraste">
+      </label>
+    </div>
+
+    <div class="panel__seccion" data-hu="HU43">
+      <button type="button" class="boton boton--secundario boton--ancho" id="boton-escuchar-pantalla">
+        <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-volume"></use></svg>
+        <span>Escuchar esta pantalla</span>
+      </button>
+    </div>
+  </dialog>
+
+  <!-- Avisos (G-03): se completa en las fases 3 y 7 (HU24, HU29) -->
+  <dialog class="panel" id="panel-avisos" popover="auto" aria-labelledby="panel-avisos-titulo">
+    <div class="panel__cabecera">
+      <h2 id="panel-avisos-titulo">Avisos</h2>
+      <button type="button" class="boton-barra" popovertarget="panel-avisos" popovertargetaction="hide">
+        <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-x"></use></svg>
+        <span class="visualmente-oculto">Cerrar</span>
+      </button>
+    </div>
+    <div id="lista-avisos"></div>
+  </dialog>
+
+  <!-- Menú de la persona: Ver como (demo), Mi cuenta, restaurar y salir -->
+  <dialog class="panel" id="panel-persona" popover="auto" aria-labelledby="panel-persona-titulo">
+    <div class="panel__cabecera">
+      <div class="persona-actual">
+        <span class="avatar avatar--grande" id="avatar-persona-panel" aria-hidden="true"></span>
+        <div class="persona-actual__texto">
+          <h2 id="panel-persona-titulo" class="titulo-chico"></h2>
+          <span class="persona-actual__rol" id="rol-persona-panel"></span>
+        </div>
+      </div>
+      <button type="button" class="boton-barra" popovertarget="panel-persona" popovertargetaction="hide">
+        <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-x"></use></svg>
+        <span class="visualmente-oculto">Cerrar</span>
+      </button>
+    </div>
+
+    <div class="panel__seccion">
+      <fieldset class="opciones-persona" id="opciones-persona">
+        <legend class="panel__titulo leyenda leyenda--fila">
+          Ver como
+          <span class="etiqueta etiqueta--demo">Modo demostración</span>
+        </legend>
+        <div class="opciones-persona__lista" id="lista-personas"></div>
+      </fieldset>
+      <p class="campo__ayuda">Abra AYLLU en otra pestaña con otra persona para ver cómo le llega todo a la familia.</p>
+    </div>
+
+    <div class="panel__seccion">
+      <ul class="lista-menu">
+        <li>
+          <a class="item-menu" href="#/cuenta">
+            <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-user"></use></svg>
+            Mi cuenta
+          </a>
+        </li>
+        <li>
+          <button type="button" class="item-menu" id="boton-restaurar">
+            <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-refresh"></use></svg>
+            Restaurar familia de ejemplo
+          </button>
+        </li>
+        <li>
+          <a class="item-menu" href="index.html">
+            <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-logout"></use></svg>
+            Salir
+          </a>
+        </li>
+      </ul>
+    </div>
+  </dialog>
+
+  <!-- Ayuda (G-04): mismo lugar en todas las pantallas (WCAG 3.2.6). Guía completa en la fase 7 (HU46) -->
+  <dialog class="dialogo dialogo--ancho" id="dialogo-ayuda" aria-labelledby="ayuda-titulo" closedby="any">
+    <div class="dialogo__cuerpo">
+      <h2 id="ayuda-titulo">¿Cómo usar AYLLU?</h2>
+      <p class="dialogo__texto">AYLLU guarda lo que pasa con Mía para que toda la familia lo sepa y nada se pierda.</p>
+      <ol class="pasos-ayuda">
+        <li><strong>Registre lo que pasó</strong><span>Toque «Registrar situación». Puede escribir o contarlo con su voz.</span></li>
+        <li><strong>Su familia lo revisa a su hora</strong><span>En cada situación verá si Jorge ya la vio y qué respondió.</span></li>
+        <li><strong>Queda guardado lo que deciden</strong><span>En «Acuerdos» está lo que usted puede resolver sola y lo que conviene consultar.</span></li>
+        <li><strong>¿Le cuesta leer?</strong><span>Toque «Aa» arriba para agrandar la letra o activar el alto contraste.</span></li>
+      </ol>
+      <form method="dialog" class="dialogo__acciones">
+        <button class="boton boton--secundario" value="cerrar" autofocus>Entendido</button>
+      </form>
+    </div>
+  </dialog>
+
+  <!-- Modal de confirmación (HU48), reutilizable desde ui.js -->
+  <dialog class="dialogo" id="dialogo-confirmar" aria-labelledby="confirmar-titulo" aria-describedby="confirmar-texto" data-hu="HU48">
+    <form method="dialog" class="dialogo__cuerpo">
+      <span class="dialogo__icono" aria-hidden="true"><svg class="icono"><use id="confirmar-icono" href="../assets/icons/sprite.svg#i-alert-circle"></use></svg></span>
+      <h2 id="confirmar-titulo"></h2>
+      <p class="dialogo__texto" id="confirmar-texto"></p>
+      <div class="dialogo__acciones">
+        <button class="boton boton--secundario" value="no" id="confirmar-no" autofocus>
+          <svg class="icono" aria-hidden="true" focusable="false"><use href="../assets/icons/sprite.svg#i-arrow-left"></use></svg>
+          No, volver
+        </button>
+        <button class="boton boton--primario" value="si" id="confirmar-si"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Mensajes breves después de cada acción -->
+  <div class="toasts" id="toasts" popover="manual" role="region" aria-label="Mensajes"></div>
+  <div class="visualmente-oculto" id="anuncios" aria-live="polite"></div>
 </body>
 </html>
