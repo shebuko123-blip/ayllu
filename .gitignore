@@ -1,0 +1,21 @@
+# Herramientas locales de cada integrante (no forman parte de la entrega)
+.agents/
+.claude/
+skills-lock.json
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/
+.idea/
+
+# Dependencias y registros (por si alguien las usa localmente)
+node_modules/
+*.log
+
+# Archivos de trabajo
+*.tmp
+~$*
