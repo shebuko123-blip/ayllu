@@ -1,3 +1,220 @@
-// AYLLU · Entrada principal (módulo ES).
-// Aplica las preferencias de lectura, monta el layout y arranca el router (fase 1).
-// Ver CLAUDE.md ("Modelo de datos") y docs/04-plan-construccion.md.
+// AYLLU · Entrada de la demo (pages/app.html).
+// Aplica las preferencias de lectura, monta la barra y sus paneles y arranca el router.
+
+import {
+  leer, suscribir, usuarioActivo, usuarioActivoId, verComo, personasDemo,
+  preferencias, guardarPreferencia, restaurarEjemplo,
+} from './store.js';
+import { definirRuta, definirNoEncontrada, iniciarRouter, refrescar } from './router.js';
+import { html, pintar, avatar, iniciales, nombreRol, confirmar, avisar, anunciar, cabecera, icono } from './ui.js';
+import { puedeLeer, leerEnVozAlta, detenerLectura } from './voz.js';
+import { vistaInicio } from './vistas/inicio.js';
+import { vistaSituaciones, vistaRegistrar, vistaDetalle } from './vistas/situaciones.js';
+import { vistaAcuerdos } from './vistas/acuerdos.js';
+import { vistaFamilia, vistaCuenta } from './vistas/familia.js';
+
+const $ = (id) => document.getElementById(id);
+const raiz = document.documentElement;
+
+// --- Rutas -------------------------------------------------------------------------
+
+definirRuta('/inicio', vistaInicio);
+definirRuta('/situaciones', vistaSituaciones);
+definirRuta('/situaciones/nueva', vistaRegistrar);
+definirRuta('/situaciones/:id', vistaDetalle);
+definirRuta('/acuerdos', vistaAcuerdos);
+definirRuta('/familia', vistaFamilia);
+definirRuta('/cuenta', vistaCuenta);
+definirNoEncontrada(() => ({
+  titulo: 'Página no encontrada',
+  seccion: null,
+  contenido: html`
+    <div class="pantalla">
+      ${cabecera('No encontramos esta página', 'Puede que el enlace esté incompleto. Vuelva a Inicio para seguir.')}
+      <p><a class="boton boton--primario" href="#/inicio">${icono('home')}Ir a Inicio</a></p>
+    </div>`,
+}));
+
+// --- Preferencias de lectura (HU41, HU42) ----------------------------------------------
+
+const NOMBRE_TAMANO = { normal: 'normal', grande: 'grande', 'muy-grande': 'muy grande' };
+
+function aplicarPreferencias() {
+  const { tamanoLetra, altoContraste } = preferencias();
+
+  if (tamanoLetra && tamanoLetra !== 'normal') raiz.dataset.textSize = tamanoLetra;
+  else delete raiz.dataset.textSize;
+
+  if (altoContraste) raiz.dataset.contrast = 'alto';
+  else delete raiz.dataset.contrast;
+
+  for (const opcion of document.querySelectorAll('input[name="tamano-letra"]')) {
+    opcion.checked = opcion.value === (tamanoLetra ?? 'normal');
+  }
+  $('interruptor-contraste').checked = Boolean(altoContraste);
+  $('estado-contraste').textContent = altoContraste ? 'Activado' : 'Desactivado';
+
+  medirBarra();
+}
+
+$('opciones-letra').addEventListener('change', (evento) => {
+  const valor = evento.target.value;
+  guardarPreferencia('tamanoLetra', valor);
+  anunciar(`Letra ${NOMBRE_TAMANO[valor]}.`);
+});
+
+$('interruptor-contraste').addEventListener('change', (evento) => {
+  guardarPreferencia('altoContraste', evento.target.checked);
+  anunciar(evento.target.checked ? 'Alto contraste activado.' : 'Alto contraste desactivado.');
+});
+
+// --- Escuchar esta pantalla (D5; versión completa en la fase 6) ---------------------------
+
+const botonEscuchar = $('boton-escuchar-pantalla');
+
+function mostrarEscuchando(leyendo) {
+  pintar(botonEscuchar, leyendo
+    ? html`${icono('player-stop')}<span>Detener la lectura</span>`
+    : html`${icono('volume')}<span>Escuchar esta pantalla</span>`);
+}
+
+if (!puedeLeer()) {
+  botonEscuchar.closest('.panel__seccion').innerHTML =
+    '<p class="campo__ayuda">Su navegador no puede leer en voz alta. Pruebe con Chrome o Edge.</p>';
+} else {
+  let leyendo = false;
+  botonEscuchar.addEventListener('click', () => {
+    if (leyendo) {
+      detenerLectura();
+      return;
+    }
+    const texto = $('contenido').innerText.replace(/\s+\n/g, '\n').trim();
+    leyendo = leerEnVozAlta(texto, {
+      alTerminar: () => { leyendo = false; mostrarEscuchando(false); },
+    });
+    mostrarEscuchando(leyendo);
+  });
+  window.addEventListener('hashchange', detenerLectura);
+}
+
+// --- Barra: persona activa, Ver como y avisos -----------------------------------------------
+
+function pintarPersona() {
+  const persona = usuarioActivo();
+  const { familia } = leer();
+
+  pintar($('avatar-persona'), html`${iniciales(persona.nombre)}`);
+  $('avatar-persona').style.setProperty('--hebra', `var(--${persona.color})`);
+  $('nombre-persona').textContent = persona.nombre;
+
+  pintar($('avatar-persona-panel'), html`${iniciales(persona.nombre)}`);
+  $('avatar-persona-panel').style.setProperty('--hebra', `var(--${persona.color})`);
+  $('panel-persona-titulo').textContent = persona.nombre;
+  $('rol-persona-panel').textContent = nombreRol(persona, familia.menor.nombre);
+
+  pintar($('lista-personas'), html`${personasDemo().map((p) => html`
+    <label class="opcion-persona">
+      <input type="radio" name="ver-como" value="${p.id}" ${p.id === persona.id ? 'checked' : ''}>
+      ${avatar(p)}
+      <span class="opcion-persona__texto">
+        <strong>${p.nombre}</strong>
+        <span class="opcion-persona__rol">${nombreRol(p, familia.menor.nombre)}</span>
+      </span>
+    </label>`)}`);
+}
+
+$('opciones-persona').addEventListener('change', (evento) => {
+  if (evento.target.name !== 'ver-como') return;
+  verComo(evento.target.value);
+  const persona = usuarioActivo();
+  $('panel-persona').hidePopover();
+  avisar(`Ahora ve AYLLU como ${persona.nombre}.`, { icono: 'user' });
+});
+
+function pintarAvisos() {
+  // Fase 3 y 7: novedades reales desde la última visita (HU24, HU29)
+  pintar($('lista-avisos'), html`
+    <p class="texto-suave">Aquí verá las respuestas y novedades de su familia en cuanto lleguen.</p>`);
+  $('contador-avisos').textContent = '';
+}
+
+// aria-expanded acompaña al estado de cada panel
+for (const panel of document.querySelectorAll('.panel[popover]')) {
+  panel.addEventListener('toggle', (evento) => {
+    const boton = document.querySelector(`[popovertarget="${panel.id}"][aria-expanded]`);
+    boton?.setAttribute('aria-expanded', String(evento.newState === 'open'));
+  });
+}
+
+// --- Ayuda (G-04) --------------------------------------------------------------------------
+
+$('boton-ayuda').addEventListener('click', () => $('dialogo-ayuda').showModal());
+
+// --- Restaurar la familia de ejemplo --------------------------------------------------------
+
+$('boton-restaurar').addEventListener('click', async () => {
+  $('panel-persona').hidePopover();
+  const confirmado = await confirmar({
+    titulo: '¿Restaurar la familia de ejemplo?',
+    texto: 'Se borrará lo que registró en esta demostración y volverán los datos de la familia Collantes. Su tamaño de letra se mantiene.',
+    accion: 'Sí, restaurar',
+    peligro: true,
+  });
+  if (!confirmado) return;
+  restaurarEjemplo();
+  location.hash = '#/inicio';
+  avisar('Listo. Volvió la familia de ejemplo.');
+});
+
+// --- Enlace "Saltar al contenido" ----------------------------------------------------------
+// Se maneja aquí para que el router no lo confunda con una ruta.
+
+document.querySelector('.saltar').addEventListener('click', (evento) => {
+  evento.preventDefault();
+  $('contenido').focus();
+});
+
+// --- Barra en dos filas si no cabe (letra grande en escritorio) -------------------------------
+
+const barra = $('barra');
+const fila = barra.querySelector('.barra__fila');
+const escritorio = matchMedia('(min-width: 64em)');
+let anchoMedido = 0;
+
+function medirBarra() {
+  barra.classList.remove('barra--dos-filas');
+  if (escritorio.matches && fila.scrollWidth > fila.clientWidth + 1) barra.classList.add('barra--dos-filas');
+  // Los paneles y el scroll-padding usan la altura real de la barra (cambia con la letra)
+  raiz.style.setProperty('--alto-barra', `${barra.offsetHeight}px`);
+}
+
+new ResizeObserver(([entrada]) => {
+  const ancho = Math.round(entrada.contentRect.width);
+  if (ancho !== anchoMedido) {
+    anchoMedido = ancho;
+    medirBarra();
+  } else {
+    raiz.style.setProperty('--alto-barra', `${barra.offsetHeight}px`);
+  }
+}).observe(barra);
+document.fonts?.ready.then(medirBarra);
+
+// --- Arranque -------------------------------------------------------------------------------
+
+function pintarTodo() {
+  aplicarPreferencias();
+  pintarPersona();
+  pintarAvisos();
+}
+
+suscribir((_, origen) => {
+  pintarTodo();
+  refrescar();
+  if (origen === 'otra-pestana') anunciar('Hay cambios de su familia en esta pantalla.');
+});
+
+pintarTodo();
+iniciarRouter($('contenido'));
+
+// Para depurar desde la consola durante el desarrollo
+window.ayllu = { leer, usuarioActivoId };
