@@ -6,12 +6,12 @@
 import {
   leer, integrante, usuarioActivo, usuarioActivoId, situacion, situacionesOrdenadas, esperaRespuesta,
   destinatariosPosibles, destinatariosPorDefecto, registrarSituacion,
-  respondio, debeMarcarRevisada, marcarRevisada, responder, cerrarSituacion, reabrirSituacion,
+  respondio, debeMarcarRevisada, puedeVer, puedeCerrar, marcarRevisada, responder, cerrarSituacion, reabrirSituacion,
 } from '../store.js';
 import { refrescar } from '../router.js';
 import {
   html, pintar, cabecera, icono, avatar, estadoVacio, etiquetaCategoria, etiquetaImportante, etiquetaEstado,
-  CATEGORIAS, listaNombres, mostrarError, limpiarError, cajaError, confirmar, avisar, anunciar,
+  CATEGORIAS, listaNombres, mostrarError, limpiarError, cajaError, confirmar, avisar, anunciar, indicadorPasos,
 } from '../ui.js';
 import { fechaHumana, iso } from '../fechas.js';
 
@@ -61,6 +61,14 @@ function resultados(filtro) {
   const lista = situacionesOrdenadas().filter(FILTROS[filtro].cumple);
 
   if (!lista.length) {
+    if (filtro === 'todas' && !puedeCerrar(usuarioActivo())) {
+      return estadoVacio({
+        titulo: 'Todavía no le enviaron situaciones',
+        texto: `Cuando alguien de la familia le envíe algo sobre ${menor()}, aparecerá aquí y podrá responder.`,
+        imagen: 'abuela-nieta-mesa.jpg',
+        alt: 'Una abuela y su nieta conversan en la mesa de la casa',
+      });
+    }
     if (filtro === 'todas') {
       return estadoVacio({
         titulo: `Aquí verá lo que registre sobre ${menor()}`,
@@ -97,7 +105,7 @@ function textoResultado(filtro) {
 }
 
 export function vistaSituaciones() {
-  const todas = leer().situaciones;
+  const todas = situacionesOrdenadas();
   if (!FILTROS[filtroActual]) filtroActual = 'todas';
 
   return {
@@ -174,16 +182,6 @@ function nuevoBorrador() {
 
 function hayAlgoEscrito() {
   return Boolean(borrador && (borrador.titulo.trim() || borrador.descripcion.trim()));
-}
-
-function indicadorPasos(paso) {
-  return html`
-    <div class="pasos" data-hu="HU46">
-      <p class="pasos__texto"><strong>Paso ${paso} de 3</strong> · ${PASOS[paso - 1]}</p>
-      <div class="pasos__barra" aria-hidden="true">
-        ${PASOS.map((_, i) => html`<span class="pasos__segmento ${i < paso ? 'pasos__segmento--hecho' : ''}"></span>`)}
-      </div>
-    </div>`;
 }
 
 // --- Paso 1 · ¿Qué pasó? -------------------------------------------------------------------
@@ -404,11 +402,12 @@ export function vistaRegistrar({ query }) {
   return {
     titulo: `Registrar situación · Paso ${paso} de 3`,
     seccion: 'situaciones',
+    flujo: 'registrar',
     contenido: html`
       <div class="pantalla pantalla--flujo" data-hu="HU09 HU10 HU15 HU25">
         <div class="pantalla__cabecera">
           <h1>Registrar situación</h1>
-          ${indicadorPasos(paso)}
+          ${indicadorPasos(paso, PASOS)}
         </div>
 
         <form class="flujo" id="flujo-registrar" novalidate>
@@ -429,7 +428,6 @@ export function vistaRegistrar({ query }) {
       </div>`,
 
     alMontar(contenedor) {
-      document.body.dataset.flujo = 'registrar';
       const form = contenedor.querySelector('#flujo-registrar');
 
       form.addEventListener('submit', (evento) => {
@@ -487,11 +485,6 @@ export function vistaRegistrar({ query }) {
     },
   };
 }
-
-// Al salir del flujo vuelve la barra inferior
-document.addEventListener('ayllu:pantalla', (evento) => {
-  if (evento.detail.camino !== '/situaciones/nueva') delete document.body.dataset.flujo;
-});
 
 // ==========================================================================================
 // SIT-03 · Detalle de situación con el hilo (versión base)
@@ -601,10 +594,11 @@ function acciones(s, yo) {
     return html`
       <section class="tarjeta tarjeta--apoyo cierre" aria-labelledby="titulo-cierre" data-hu="HU34">
         <h2 id="titulo-cierre" class="titulo-chico" tabindex="-1">${icono('circle-check')} Esta situación quedó resuelta</h2>
-        <p>Si vuelve a pasar algo, puede abrirla otra vez. Todo lo anterior se mantiene en el hilo.</p>
-        <div class="grupo-botones">
-          <button type="button" class="boton boton--secundario" data-accion="reabrir">${icono('refresh')}Volver a abrir</button>
-        </div>
+        ${puedeCerrar(yo) ? html`
+          <p>Si vuelve a pasar algo, puede abrirla otra vez. Todo lo anterior se mantiene en el hilo.</p>
+          <div class="grupo-botones">
+            <button type="button" class="boton boton--secundario" data-accion="reabrir">${icono('refresh')}Volver a abrir</button>
+          </div>` : html`<p>Todo lo que pasó se mantiene en el hilo.</p>`}
       </section>`;
   }
 
@@ -612,6 +606,13 @@ function acciones(s, yo) {
   const debeResponder = soyDestino && !respondio(s, yo.id);
   // Para quien registró, cerrar es el paso natural cuando ya le respondieron
   const cerrarEsPrincipal = !soyDestino && s.estado === 'respondida';
+
+  if (!puedeCerrar(yo)) {
+    // Familiar de apoyo: responde si se la enviaron; cerrar le toca a quien cuida o a los padres
+    return html`
+      ${soyDestino ? formularioRespuesta(s, yo, { primaria: debeResponder }) : ''}
+      <p class="aviso aviso--info">${icono('info-circle')}<span>Quien cuida o los padres la cerrarán cuando quede resuelta.</span></p>`;
+  }
 
   return html`
     ${soyDestino ? formularioRespuesta(s, yo, { primaria: debeResponder }) : ''}
@@ -670,6 +671,19 @@ export function vistaDetalle({ params }) {
 
   const autor = integrante(s.autor);
   const yo = usuarioActivo();
+
+  // Un familiar de apoyo que llega con un enlace a una situación que no le enviaron
+  if (!puedeVer(s, yo)) {
+    return {
+      titulo: 'Situación reservada',
+      seccion: 'situaciones',
+      contenido: html`
+        <div class="pantalla">
+          ${cabecera('Esta situación no se le envió', `Usted ve las situaciones que la familia le envía. Si necesita saber de esta, pregúntele a ${autor?.nombre ?? 'quien la registró'}.`)}
+          <p><a class="boton boton--secundario" href="#/situaciones">${icono('arrow-left')}Ver mis situaciones</a></p>
+        </div>`,
+    };
+  }
 
   return {
     titulo: s.titulo,

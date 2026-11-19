@@ -168,6 +168,17 @@ export function enConstruccion(texto, fase) {
     </div>`;
 }
 
+/** "Paso 2 de 3 · Cuéntelo" con su barra (heurística 1). Se usa en todos los flujos de 3 pasos. */
+export function indicadorPasos(paso, nombres) {
+  return html`
+    <div class="pasos" data-hu="HU46">
+      <p class="pasos__texto"><strong>Paso ${paso} de ${nombres.length}</strong> · ${nombres[paso - 1]}</p>
+      <div class="pasos__barra" aria-hidden="true">
+        ${nombres.map((_, i) => html`<span class="pasos__segmento ${i < paso ? 'pasos__segmento--hecho' : ''}"></span>`)}
+      </div>
+    </div>`;
+}
+
 /** Cabecera de pantalla: título y una frase que explica para qué sirve. */
 export function cabecera(titulo, texto) {
   return html`
@@ -205,7 +216,7 @@ export function mostrarError(control, mensaje, { anunciarlo = false } = {}) {
   const idError = `${control.id}-error`;
   const caja = document.getElementById(idError);
   if (!caja) return;
-  pintar(caja, html`${icono('alert-circle')}<span><span class="visualmente-oculto">Falta un dato: </span>${mensaje}</span>`);
+  pintar(caja, html`${icono('alert-circle')}<span><span class="visualmente-oculto">Revise este dato: </span>${mensaje}</span>`);
   caja.hidden = false;
   control.closest('.campo')?.classList.add('campo--error');
   if (control.matches('input, textarea, select')) control.setAttribute('aria-invalid', 'true');

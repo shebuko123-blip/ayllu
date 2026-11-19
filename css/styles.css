@@ -1033,6 +1033,8 @@ dialog:modal::backdrop {
 .campo__opcional { color: var(--ink-muted); font-weight: 400; }
 .campo--grupo { min-inline-size: 0; margin: 0; padding: 0; border: 0; }
 .campo--grupo > legend { padding: 0; margin-block-end: var(--space-2); font-weight: 700; }
+/* Las opciones dentro de un grupo no van en negrita (solo su nombre) */
+.campo--grupo label { font-weight: 400; }
 
 /* Error: borde, ícono y texto (nunca solo color) */
 .campo__error {
@@ -1274,7 +1276,8 @@ html[data-contrast="alto"] .pasos__segmento { outline: 1px solid var(--secondary
   body[data-flujo] .secciones { display: none; }
   body[data-flujo] main { padding-block-end: var(--space-8); }
   body[data-flujo] .toasts { inset-block-end: calc(var(--space-24) + var(--space-8)); }
-  .flujo__acciones {
+  /* Solo en flujos sin barra inferior: si no, quedaría debajo de ella */
+  body[data-flujo] .flujo__acciones {
     position: sticky;
     inset-block-end: 0;
     z-index: 5;
@@ -1423,6 +1426,84 @@ html[data-contrast="alto"] .aviso { outline: 1px solid var(--ink); }
 .acceso:hover { background: var(--surface-alt); border-color: var(--ink); }
 .acceso .opcion-categoria__icono { grid-row: auto; inline-size: 2.75rem; block-size: 2.75rem; flex: none; }
 .acceso .opcion-categoria__icono .icono { inline-size: 1.5rem; block-size: 1.5rem; }
+
+/* --- Familia (FAM-01, FAM-02, FAM-03) --- */
+.pantalla__cabecera--accion {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  max-inline-size: none;
+}
+.pantalla__cabecera--accion > div { display: grid; gap: var(--space-2); max-inline-size: var(--reading-max); }
+
+.integrantes-fichas { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+.integrante-ficha { display: grid; gap: var(--space-3); }
+.integrante-ficha--pendiente { border: 2px dashed var(--border-strong); background: var(--canvas); }
+.integrante-ficha__cabecera { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-4); }
+.integrante-ficha__texto { display: grid; flex: 1 1 10rem; line-height: 1.3; }
+.integrante-ficha__nombre { font-family: var(--font-body); font-size: var(--fs-h3); font-weight: 700; }
+.integrante-ficha__permisos, .integrante-ficha__invitacion { color: var(--ink-muted); }
+.integrante-ficha__permisos strong, .integrante-ficha__invitacion strong { color: var(--ink); }
+.integrante-ficha__acciones { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.codigo {
+  font-size: var(--fs-h2);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.codigo--chico { font-size: var(--fs-body); letter-spacing: 0.08em; }
+.codigo-caja { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-3); }
+.entrada--enlace { font-size: var(--fs-small); text-overflow: ellipsis; }
+.entrada--codigo { max-inline-size: 16rem; font-size: var(--fs-h3); letter-spacing: 0.12em; text-transform: uppercase; }
+.invitacion-lista { display: grid; gap: var(--space-6); }
+.nota-demo { background: var(--highlight-tint); color: var(--warning-ink); }
+
+.campo--corto { max-inline-size: 14rem; }
+.entrada-con-unidad { display: flex; align-items: center; gap: var(--space-3); }
+.entrada-con-unidad .entrada { inline-size: 6rem; }
+
+/* Tarjetas de rol: una por fila, con lo que puede hacer cada uno */
+.categorias--una { grid-template-columns: minmax(0, 1fr); }
+.opcion-categoria--rol { --cat-tint: var(--secondary-tint); --cat-ink: var(--secondary-deep); }
+.opciones-dos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: var(--space-3); }
+
+/* Mi cuenta: opciones como filas grandes */
+.lista-opciones { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.opcion-enlace {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  inline-size: 100%;
+  min-block-size: var(--touch-min);
+  padding: var(--space-4);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+.opcion-enlace:hover { border-color: var(--border-strong); background: var(--surface-alt); }
+.opcion-enlace:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.opcion-enlace > .icono { inline-size: 1.5rem; block-size: 1.5rem; flex: none; margin-block-start: 0.15em; color: var(--secondary); }
+.opcion-enlace > span { display: grid; gap: var(--space-1); }
+.opcion-enlace__texto { color: var(--ink-muted); font-size: var(--fs-small); }
+
+/* --- Antes de entrar (ON-01, ON-02, INV-01) --- */
+.otra-opcion { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+.otra-opcion a { display: inline-flex; align-items: center; gap: var(--space-2); min-block-size: var(--touch-min); font-weight: 700; color: var(--info); }
+.otra-opcion a .icono { inline-size: 1.25rem; block-size: 1.25rem; }
+/* Todavía no hay familia: la barra muestra solo Letra y Ayuda (siempre en el mismo lugar) */
+body[data-flujo="antes"] .secciones,
+body[data-flujo="antes"] #boton-avisos,
+body[data-flujo="antes"] #boton-persona,
+body[data-flujo="antes"] .boton.registrar-barra { display: none; }
 
 /* Se dibuja una sola vez al abrir la situación (y nunca con movimiento reducido) */
 @media (prefers-reduced-motion: no-preference) {

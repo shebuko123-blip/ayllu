@@ -121,7 +121,7 @@ Inicio responde a una sola pregunta: **¿qué necesita mi atención hoy?** El co
 | L-01 | Landing de presentación | `pages/index.html` | Presentación del producto (no es HU) |
 | ON-01 | Bienvenida y elección de rol | `app.html#/bienvenida` | HU01 |
 | ON-02 | Configurar espacio familiar (grupo + menor) | `app.html#/configurar` | HU02, HU03, HU46 |
-| ON-03 | Revisar y crear | `app.html#/configurar/revisar` | HU02, HU48 |
+| ON-03 | Revisar y crear (paso 3 dentro de `#/configurar`, como en Registrar) | `app.html#/configurar` | HU02, HU48 |
 | INV-01 | Aceptar invitación | `app.html#/invitacion` | HU05 |
 | IN-01 | Inicio (variante abuelo) | `app.html#/inicio` | HU30, HU17 (recientes) |
 | IN-02 | Inicio (variante padre o madre) | `app.html#/inicio` | HU38, HU24 |

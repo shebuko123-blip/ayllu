@@ -3,19 +3,20 @@
 
 import {
   leer, suscribir, usuarioActivo, usuarioActivoId, verComo, personasDemo,
-  preferencias, guardarPreferencia, restaurarEjemplo, integrante,
+  preferencias, guardarPreferencia, integrante,
   avisosPara, avisosNuevos, marcarAvisosVistos, eventosRecientes,
 } from './store.js';
 import { definirRuta, definirNoEncontrada, iniciarRouter, refrescar } from './router.js';
 import {
-  html, pintar, avatar, iniciales, nombreRol, confirmar, avisar, anunciar, cabecera, icono, textoAviso, ICONO_AVISO,
+  html, pintar, avatar, iniciales, nombreRol, avisar, anunciar, cabecera, icono, textoAviso, ICONO_AVISO,
 } from './ui.js';
 import { fechaHumana, hora } from './fechas.js';
 import { puedeLeer, leerEnVozAlta, detenerLectura } from './voz.js';
 import { vistaInicio } from './vistas/inicio.js';
 import { vistaSituaciones, vistaRegistrar, vistaDetalle } from './vistas/situaciones.js';
 import { vistaAcuerdos } from './vistas/acuerdos.js';
-import { vistaFamilia, vistaCuenta } from './vistas/familia.js';
+import { vistaFamilia, vistaMenor, vistaInvitar, vistaCuenta, restaurarConConfirmacion } from './vistas/familia.js';
+import { vistaBienvenida, vistaConfigurar, vistaInvitacion } from './vistas/onboarding.js';
 
 const $ = (id) => document.getElementById(id);
 const raiz = document.documentElement;
@@ -28,7 +29,12 @@ definirRuta('/situaciones/nueva', vistaRegistrar);
 definirRuta('/situaciones/:id', vistaDetalle);
 definirRuta('/acuerdos', vistaAcuerdos);
 definirRuta('/familia', vistaFamilia);
+definirRuta('/familia/menor', vistaMenor);
+definirRuta('/familia/invitar', vistaInvitar);
 definirRuta('/cuenta', vistaCuenta);
+definirRuta('/bienvenida', vistaBienvenida);
+definirRuta('/configurar', vistaConfigurar);
+definirRuta('/invitacion', vistaInvitacion);
 definirNoEncontrada(() => ({
   titulo: 'Página no encontrada',
   seccion: null,
@@ -187,6 +193,14 @@ $('lista-avisos').addEventListener('click', (evento) => {
  * se vuelve a pintar la pantalla y un mensaje dice qué pasó ("Jorge vio «…» · 9:40 p. m.").
  */
 function avisarCambiosDeOtraPestana(anterior) {
+  // HU05: alguien aceptó su invitación en otra pestaña
+  const antes = new Map((anterior?.integrantes ?? []).map((i) => [i.id, i.estado]));
+  for (const i of leer().integrantes) {
+    if (i.estado === 'activo' && antes.get(i.id) === 'invitado') {
+      avisar(`${i.nombre} aceptó la invitación. Ya es parte de la familia.`, { icono: 'user-plus' });
+    }
+  }
+  if (anterior && anterior.familia?.id !== leer().familia.id) return;  // otra familia: no hay nada que comparar
   const recientes = eventosRecientes(anterior);
   for (const a of recientes.slice(0, 3).reverse()) {
     const cuando = a.evento.tipo === 'revisada' ? ` · ${hora(a.evento.fecha)}` : '';
@@ -209,18 +223,9 @@ $('boton-ayuda').addEventListener('click', () => $('dialogo-ayuda').showModal())
 
 // --- Restaurar la familia de ejemplo --------------------------------------------------------
 
-$('boton-restaurar').addEventListener('click', async () => {
+$('boton-restaurar').addEventListener('click', () => {
   $('panel-persona').hidePopover();
-  const confirmado = await confirmar({
-    titulo: '¿Restaurar la familia de ejemplo?',
-    texto: 'Se borrará lo que registró en esta demostración y volverán los datos de la familia Collantes. Su tamaño de letra se mantiene.',
-    accion: 'Sí, restaurar',
-    peligro: true,
-  });
-  if (!confirmado) return;
-  restaurarEjemplo();
-  location.hash = '#/inicio';
-  avisar('Listo. Volvió la familia de ejemplo.');
+  restaurarConConfirmacion();
 });
 
 // --- Enlace "Saltar al contenido" ----------------------------------------------------------

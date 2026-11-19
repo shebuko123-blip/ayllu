@@ -95,9 +95,9 @@ export function integrante(id) {
   return leer().integrantes.find((i) => i.id === id) ?? null;
 }
 
-/** Integrantes con quienes se puede probar "Ver como": la cuidadora y los padres activos. */
+/** Integrantes con quienes se puede probar "Ver como": todos los activos (no los invitados). */
 export function personasDemo() {
-  return leer().integrantes.filter((i) => i.estado === 'activo' && i.rol !== 'apoyo');
+  return leer().integrantes.filter((i) => i.estado === 'activo');
 }
 
 export function esCuidador(persona = usuarioActivo()) {
@@ -110,9 +110,27 @@ export function situacion(id) {
   return leer().situaciones.find((s) => s.id === id) ?? null;
 }
 
-/** De la más reciente a la más antigua. */
+/**
+ * Permisos por rol (HU06): quien cuida y los padres ven todas las situaciones;
+ * un familiar de apoyo solo las que le enviaron o registró él.
+ */
+export function puedeVer(s, persona = usuarioActivo()) {
+  if (!s || !persona) return false;
+  if (persona.rol !== 'apoyo') return true;
+  return s.autor === persona.id || s.enviadaA.includes(persona.id);
+}
+
+/** Cerrar y volver a abrir: quien cuida y los padres. Un familiar de apoyo solo ve y responde. */
+export function puedeCerrar(persona = usuarioActivo()) {
+  return Boolean(persona) && persona.rol !== 'apoyo';
+}
+
+/** Las que puede ver quien usa la pantalla, de la más reciente a la más antigua. */
 export function situacionesOrdenadas() {
-  return [...leer().situaciones].sort((a, b) => b.creadaEn.localeCompare(a.creadaEn));
+  const persona = usuarioActivo();
+  return leer().situaciones
+    .filter((s) => puedeVer(s, persona))
+    .sort((a, b) => b.creadaEn.localeCompare(a.creadaEn));
 }
 
 /** Enviada y todavía sin respuesta ni cierre. */
@@ -214,6 +232,7 @@ export function responder(id, texto, personaId = usuarioActivoId()) {
 }
 
 export function cerrarSituacion(id, personaId = usuarioActivoId()) {
+  if (!puedeCerrar(integrante(personaId))) return false;
   return cambiarSituacion(id, (s) => {
     agregarEvento(s, 'cerrada', personaId);
     s.estado = 'cerrada';
@@ -222,6 +241,7 @@ export function cerrarSituacion(id, personaId = usuarioActivoId()) {
 
 /** Al volver a abrir, la situación recupera el estado que tenía antes de cerrarse. */
 export function reabrirSituacion(id, personaId = usuarioActivoId()) {
+  if (!puedeCerrar(integrante(personaId))) return false;
   return cambiarSituacion(id, (s) => {
     agregarEvento(s, 'reabierta', personaId);
     s.estado = estadoAbierto(s);
@@ -277,6 +297,123 @@ export function eventosRecientes(anterior, personaId = usuarioActivoId()) {
   if (!anterior) return [];
   const antes = new Set(avisosPara(personaId, anterior).map((a) => `${a.situacion.id}|${a.evento.tipo}|${a.evento.fecha}`));
   return avisosPara(personaId).filter((a) => !antes.has(`${a.situacion.id}|${a.evento.tipo}|${a.evento.fecha}`));
+}
+
+// --- Familia: invitar, aceptar, perfil del menor y espacio nuevo (HU01–HU06) ---------
+
+// Sin letras ni números que se confundan al dictarlos o leerlos (0/O, 1/I/L, 2/Z, 5/S, 8/B)
+const LETRAS_CODIGO = 'ACDEFGHJKMNPQRTUVWXY34679';
+// Colores de hebra para integrantes nuevos: todos con texto blanco legible (≥ 4,5:1)
+const COLORES = ['primary', 'info', 'cat-permiso', 'secondary', 'cat-salud-ink', 'cat-otro-ink'];
+
+/** "  ab-3c d " → "AB3CD": acepta el código con espacios, guiones o minúsculas. */
+export function normalizarCodigo(texto) {
+  return String(texto ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function nuevoCodigo(usados) {
+  let codigo;
+  do {
+    const azar = crypto.getRandomValues(new Uint32Array(6));
+    codigo = [...azar].map((n) => LETRAS_CODIGO[n % LETRAS_CODIGO.length]).join('');
+  } while (usados.includes(codigo));
+  return codigo;
+}
+
+function idDesdeNombre(nombre, usados) {
+  const base = nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'integrante';
+  let id = base;
+  for (let n = 2; usados.includes(id); n++) id = `${base}-${n}`;
+  return id;
+}
+
+export function puedeInvitar(persona = usuarioActivo()) {
+  return esCuidador(persona);
+}
+
+/** La invitación pendiente que corresponde a un código (o null). */
+export function invitacionPorCodigo(codigo) {
+  const limpio = normalizarCodigo(codigo);
+  if (!limpio) return null;
+  return leer().integrantes.find((i) => i.estado === 'invitado' && i.invitacion?.codigo === limpio) ?? null;
+}
+
+/**
+ * HU04: suma a alguien como "invitado" con un código de 6 caracteres.
+ * Devuelve { id, codigo, guardado }.
+ */
+export function invitarFamiliar({ nombre, rol }, invitadoPor = usuarioActivoId()) {
+  const { integrantes } = leer();
+  const id = idDesdeNombre(nombre, integrantes.map((i) => i.id));
+  const codigo = nuevoCodigo(integrantes.map((i) => i.invitacion?.codigo).filter(Boolean));
+  const usados = integrantes.map((i) => i.color);
+  const color = COLORES.find((c) => !usados.includes(c)) ?? COLORES[integrantes.length % COLORES.length];
+  const guardado = actualizar((s) => {
+    s.integrantes.push({
+      id, nombre: nombre.trim(), rol, color, estado: 'invitado',
+      invitacion: { codigo, por: invitadoPor, fecha: new Date().toISOString() },
+    });
+  });
+  return { id, codigo, guardado };
+}
+
+export function cancelarInvitacion(id) {
+  return actualizar((s) => {
+    s.integrantes = s.integrantes.filter((i) => !(i.id === id && i.estado === 'invitado'));
+  });
+}
+
+/** HU05: la persona invitada queda activa y pasa a ser quien usa esta pestaña. */
+export function aceptarInvitacion(id) {
+  try { sessionStorage.setItem(CLAVE_USUARIO, id); } catch { /* sin sessionStorage */ }
+  const ahora = new Date().toISOString();
+  return actualizar((s) => {
+    const persona = s.integrantes.find((i) => i.id === id);
+    if (!persona) return;
+    persona.estado = 'activo';
+    persona.invitacion = { ...persona.invitacion, aceptadaEn: ahora };
+    s.ultimaVisita[id] = ahora;  // lo anterior a su llegada no le aparece como nuevo
+  });
+}
+
+/** HU03: nombre y edad del menor. */
+export function guardarMenor({ nombre, edad }) {
+  return actualizar((s) => { s.familia.menor = { nombre: nombre.trim(), edad: Number(edad) }; });
+}
+
+/** "Quispe" → "Familia Quispe"; "familia Quispe" se respeta. */
+export function nombreFamilia(texto) {
+  const apellido = texto.trim().replace(/\s+/g, ' ').replace(/^familia\s*/i, '');
+  // "quispe mamani" → "Quispe Mamani"
+  return `Familia ${apellido.replace(/(^|\s)(\p{L})/gu, (_, espacio, letra) => espacio + letra.toUpperCase())}`;
+}
+
+/**
+ * HU01–HU03: crea un espacio familiar nuevo que reemplaza la familia de ejemplo.
+ * Quien lo crea queda como única integrante activa; luego invita a los demás (HU04).
+ */
+export function crearFamilia({ familia, menor, persona }) {
+  const prefs = leer().preferencias;
+  const ahora = new Date().toISOString();
+  const id = idDesdeNombre(persona.nombre, []);
+  estado = {
+    familia: {
+      id: idDesdeNombre(familia, []),
+      nombre: nombreFamilia(familia),
+      menor: { nombre: menor.nombre.trim(), edad: Number(menor.edad) },
+    },
+    integrantes: [{ id, nombre: persona.nombre.trim(), rol: persona.rol, color: 'primary', estado: 'activo' }],
+    usuarioActual: id,
+    situaciones: [],
+    acuerdos: [],
+    preferencias: prefs,
+    ultimaVisita: { [id]: ahora },
+  };
+  const guardado = persistir(estado);
+  try { sessionStorage.setItem(CLAVE_USUARIO, id); } catch { /* sin sessionStorage */ }
+  emitir('local');
+  return guardado;
 }
 
 // --- Preferencias (HU41, HU42, HU46) ----------------------------------------

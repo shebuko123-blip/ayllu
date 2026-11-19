@@ -51,7 +51,8 @@ Si `main.js` crece demasiado, se pueden agregar módulos en `js/` (por ejemplo `
 ```js
 {
   familia: { id, nombre: "Familia Collantes", menor: { nombre: "Mía", edad: 8 } },
-  integrantes: [{ id, nombre, rol: "abuela" | "padre" | "madre" | "apoyo", color, estado: "activo" | "invitado" }],
+  integrantes: [{ id, nombre, rol: "abuela" | "abuelo" | "padre" | "madre" | "apoyo", color, estado: "activo" | "invitado",
+                 invitacion: { codigo, por, fecha, aceptadaEn } }],   // invitacion solo si entró con código (HU04, HU05)
   usuarioActual: "rosa",                                   // valor por defecto; "Ver como" lo guarda por pestaña en sessionStorage (ayllu:usuario) para poder tener a Rosa y a Jorge en dos pestañas a la vez
   situaciones: [{
     id, categoria: "salud" | "colegio" | "permiso" | "otro",

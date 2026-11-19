@@ -23,7 +23,7 @@ function bandaSaludo(persona) {
     const quien = novedad && integrante(novedad.autor)?.nombre;
     const linea = novedad
       ? html`${quien} ${novedad.tipo === 'respuesta' ? 'respondió' : 'vio'} <strong>«${novedad.titulo}»</strong>.`
-      : html`Cuando registre algo sobre Mía, aquí verá si su familia ya lo vio.`;
+      : html`Cuando registre algo sobre ${leer().familia.menor.nombre}, aquí verá si su familia ya lo vio.`;
     return html`
       <section class="saludo" aria-labelledby="titulo-inicio">
         <div class="saludo__texto">
@@ -31,7 +31,9 @@ function bandaSaludo(persona) {
           <p>${linea}</p>
         </div>
         <div class="saludo__foto">
-          <img src="../assets/images/hero-abuela-nieta.jpg" alt="Una abuela abraza a su nieta en casa" width="1600" height="1071" fetchpriority="high">
+          ${persona.rol === 'abuelo'
+            ? html`<img src="../assets/images/abuelo-tareas.jpg" alt="Un abuelo ayuda a su nieto con las tareas" width="1600" height="900" fetchpriority="high">`
+            : html`<img src="../assets/images/hero-abuela-nieta.jpg" alt="Una abuela abraza a su nieta en casa" width="1600" height="1071" fetchpriority="high">`}
         </div>
       </section>`;
   }
@@ -47,7 +49,9 @@ function bandaSaludo(persona) {
         <p>${linea}</p>
       </div>
       <div class="saludo__foto">
-        <img src="../assets/images/jorge.jpg" alt="Un padre conversa por videollamada desde su casa" width="1600" height="900" fetchpriority="high">
+        ${persona.rol === 'padre'
+          ? html`<img src="../assets/images/jorge.jpg" alt="Un padre conversa por videollamada desde su casa" width="1600" height="900" fetchpriority="high">`
+          : html`<img src="../assets/images/abuela-nieta-mesa.jpg" alt="Una abuela y su nieta conversan sentadas a la mesa" width="1600" height="1067" fetchpriority="high">`}
       </div>
     </section>`;
 }

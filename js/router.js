@@ -71,6 +71,9 @@ function resolver({ moverFoco }) {
   actual = { camino, params, query, seccion: resultado.seccion ?? null };
 
   pintar(contenedor, resultado.contenido);
+  // Flujos (registrar, antes de entrar): la vista lo pide y el CSS reorganiza la barra
+  if (resultado.flujo) document.body.dataset.flujo = resultado.flujo;
+  else delete document.body.dataset.flujo;
   document.title = resultado.titulo ? `${resultado.titulo} · AYLLU` : 'AYLLU';
 
   for (const enlace of document.querySelectorAll('[data-seccion]')) {
