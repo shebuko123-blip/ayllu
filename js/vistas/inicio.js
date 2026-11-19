@@ -1,15 +1,11 @@
 // AYLLU · Inicio: ¿qué necesita mi atención hoy? Cambia según el rol (03-arquitectura.md §4).
-// Fase 1: banda de saludo y lateral de la familia. Las tarjetas protagonistas llegan en las
-// fases 3 (HU38, padre) y 5 (HU30, abuela); las novedades en la fase 7 (HU24).
+// Fase 3: padre o madre → "Esperan su respuesta" (HU38); abuela → recientes (HU17) y accesos rápidos.
+// Pendiente: "Sin respuesta todavía" de la abuela (fase 5, HU30) y las novedades del padre (fase 7, HU24).
 
-import { leer, usuarioActivo, esCuidador, integrante } from '../store.js';
-import { html, avatar, nombreRol, enConstruccion, icono } from '../ui.js';
-import { saludo } from '../fechas.js';
-
-function pendientesDe(personaId) {
-  return leer().situaciones.filter((s) =>
-    s.enviadaA.includes(personaId) && (s.estado === 'enviada' || s.estado === 'revisada'));
-}
+import { leer, usuarioActivo, esCuidador, integrante, pendientesDe, situacionesOrdenadas } from '../store.js';
+import { html, avatar, nombreRol, icono, etiquetaCategoria, etiquetaImportante, CATEGORIAS } from '../ui.js';
+import { saludo, fechaHumana } from '../fechas.js';
+import { tarjetaSituacion } from './situaciones.js';
 
 /** Última novedad de otra persona: "Jorge respondió sobre «Mía tiene fiebre…»". */
 function ultimaNovedad(personaId) {
@@ -87,6 +83,79 @@ function lateralFamilia() {
     </aside>`;
 }
 
+// --- Padre o madre: Esperan su respuesta (HU38) ------------------------------------------------
+
+function quienYCuando(s) {
+  const autor = integrante(s.autor);
+  return html`${autor?.nombre ?? 'Alguien'} la envió · <time datetime="${s.creadaEn}">${fechaHumana(s.creadaEn)}</time>`;
+}
+
+function esperanSuRespuesta(persona) {
+  const lista = pendientesDe(persona.id);
+  return html`
+    <section class="tarjeta tarjeta--protagonista bloque" aria-labelledby="titulo-esperan" data-hu="HU38">
+      <div class="bloque__cabecera">
+        <h2 id="titulo-esperan">Esperan su respuesta</h2>
+        ${lista.length ? html`<span class="etiqueta etiqueta--enviada">${icono('clock')}${lista.length} ${lista.length === 1 ? 'situación' : 'situaciones'}</span>` : ''}
+      </div>
+      ${lista.length ? html`
+        <p class="texto-suave">Las importantes van primero. Respóndalas cuando su jornada se lo permita.</p>
+        <ul class="lista-pendientes">
+          ${lista.map((s) => html`
+            <li class="pendiente ${s.importante ? 'pendiente--importante' : ''}">
+              <div class="grupo-etiquetas">
+                ${etiquetaCategoria(s.categoria)}
+                ${s.importante ? etiquetaImportante() : ''}
+              </div>
+              <h3 class="pendiente__titulo"><a href="#/situaciones/${s.id}">${s.titulo}</a></h3>
+              <p class="pendiente__meta">${quienYCuando(s)}${s.revisadaPor?.[persona.id] ? ' · usted ya la vio' : ''}</p>
+            </li>`)}
+        </ul>` : html`
+        <div class="al-dia">
+          ${icono('circle-check')}
+          <p>No hay nada esperando su respuesta. Todo está al día.</p>
+        </div>`}
+      <a class="boton boton--fantasma" href="#/situaciones">${icono('list')}Ver todas las situaciones</a>
+    </section>`;
+}
+
+// --- Abuela o abuelo: recientes y accesos rápidos -----------------------------------------------
+
+function situacionesRecientes() {
+  const recientes = situacionesOrdenadas().slice(0, 3);
+  if (!recientes.length) return '';
+  return html`
+    <section class="bloque" aria-labelledby="titulo-recientes" data-hu="HU17">
+      <div class="bloque__cabecera">
+        <h2 id="titulo-recientes">Situaciones recientes</h2>
+        <a class="boton boton--fantasma" href="#/situaciones">${icono('list')}Ver todas</a>
+      </div>
+      <ul class="lista-situaciones lista-situaciones--una">${recientes.map(tarjetaSituacion)}</ul>
+    </section>`;
+}
+
+const ACCESOS = [
+  { categoria: 'salud', texto: 'Algo de salud' },
+  { categoria: 'colegio', texto: 'Algo del colegio' },
+  { categoria: 'permiso', texto: 'Un permiso' },
+];
+
+function accesosRapidos() {
+  return html`
+    <section class="bloque" aria-labelledby="titulo-accesos">
+      <h2 id="titulo-accesos">¿Qué quiere contar?</h2>
+      <ul class="accesos">
+        ${ACCESOS.map((a) => html`
+          <li>
+            <a class="acceso opcion-categoria--${a.categoria}" href="#/situaciones/nueva?categoria=${a.categoria}">
+              <span class="opcion-categoria__icono">${icono(CATEGORIAS[a.categoria].icono)}</span>
+              <span>${a.texto}</span>
+            </a>
+          </li>`)}
+      </ul>
+    </section>`;
+}
+
 export function vistaInicio() {
   const persona = usuarioActivo();
   const cuidador = esCuidador(persona);
@@ -97,10 +166,10 @@ export function vistaInicio() {
       <div class="pantalla">
         ${bandaSaludo(persona)}
         <div class="dos-columnas">
-          <div class="bloque">
+          <div class="bloque bloque--espacioso">
             ${cuidador
-              ? enConstruccion('Aquí verá las consultas que todavía no tienen respuesta, sus situaciones recientes y accesos rápidos para registrar.', '3 y 5')
-              : enConstruccion('Aquí verá las situaciones que esperan su respuesta y lo nuevo desde su última visita.', '3 y 7')}
+              ? html`${situacionesRecientes()}${accesosRapidos()}`
+              : esperanSuRespuesta(persona)}
           </div>
           ${lateralFamilia()}
         </div>

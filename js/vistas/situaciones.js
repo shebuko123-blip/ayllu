@@ -1,11 +1,12 @@
-// AYLLU · Situaciones (fase 2):
+// AYLLU · Situaciones (fases 2 y 3):
 // - SIT-01 · Lista e historial con filtros (HU17, HU42).
 // - SIT-02 · Registrar en 3 pasos: qué pasó, cuéntelo, revisar y enviar (HU09, HU10, HU15, HU25).
-// - SIT-03 · Detalle con el hilo (versión base; la coordinación llega en la fase 3).
+// - SIT-03 · Detalle con el hilo, revisión, respuesta y cierre (fase 3: HU26, HU29, HU33, HU34).
 
 import {
   leer, integrante, usuarioActivo, usuarioActivoId, situacion, situacionesOrdenadas, esperaRespuesta,
   destinatariosPosibles, destinatariosPorDefecto, registrarSituacion,
+  respondio, debeMarcarRevisada, marcarRevisada, responder, cerrarSituacion, reabrirSituacion,
 } from '../store.js';
 import { refrescar } from '../router.js';
 import {
@@ -34,7 +35,7 @@ let filtroActual = 'todas';
 const SIETE_DIAS = 7 * 24 * 60 * 60 * 1000;
 
 /** Tarjeta de situación: toda la tarjeta lleva al detalle, pero el enlace es solo el título. */
-function tarjetaSituacion(s) {
+export function tarjetaSituacion(s) {
   const autor = integrante(s.autor);
   return html`
     <li>
@@ -507,22 +508,24 @@ function textoEvento(e, s) {
     case 'decision': return `${quien} registró una decisión`;
     case 'cerrada': return `${quien} la cerró`;
     case 'corregida': return `${quien} la corrigió`;
+    case 'reabierta': return `${quien} la volvió a abrir`;
     default: return quien;
   }
 }
 
-/** Lo que falta, como nodos punteados al final del hilo (heurística 1). */
-function pendientes(s) {
+/**
+ * Lo que falta, como nodos punteados al final del hilo (heurística 1).
+ * Por cada destinatario: si todavía no la vio, o si la vio y falta su respuesta.
+ */
+function pendientes(s, yoId) {
   if (s.estado === 'cerrada') return [];
   const lista = [];
-  const destino = s.enviadaA.map(nombre);
-  const nombres = listaNombres(destino);
-  const yaVieron = s.enviadaA.every((id) => s.revisadaPor?.[id]);
-  const hayRespuesta = s.eventos.some((e) => e.tipo === 'respuesta');
   if (!s.enviadaA.length) lista.push('Enviar a la familia');
-  else {
-    if (!yaVieron) lista.push(`${nombres} todavía no la ${destino.length > 1 ? 'han' : 'ha'} visto`);
-    if (!hayRespuesta) lista.push(`Respuesta de ${nombres}`);
+  for (const id of s.enviadaA) {
+    if (respondio(s, id)) continue;
+    if (id === yoId) lista.push('Su respuesta');
+    else if (!s.revisadaPor?.[id]) lista.push(`${nombre(id)} todavía no la ha visto`);
+    else lista.push(`Respuesta de ${nombre(id)}`);
   }
   lista.push('Cerrar la situación cuando quede resuelta');
   return lista;
@@ -531,25 +534,124 @@ function pendientes(s) {
 // El hilo se "dibuja" solo la primera vez que se abre cada situación en esta pestaña
 const hilosDibujados = new Set();
 
-function hilo(s) {
+function hilo(s, yoId) {
   const dibujar = !hilosDibujados.has(s.id);
   hilosDibujados.add(s.id);
   const eventos = [...s.eventos].sort((a, b) => a.fecha.localeCompare(b.fecha));
 
   return html`
-    <ol class="hilo ${dibujar ? 'hilo--dibujar' : ''}" aria-label="Lo que pasó con esta situación">
+    <ol class="hilo ${dibujar ? 'hilo--dibujar' : ''}" aria-label="Lo que pasó con esta situación" data-hu="HU29 HU33">
       ${eventos.map((e, i) => html`
-        <li class="hilo__paso" style="--hebra: var(--${integrante(e.autor)?.color ?? 'ink'}); --orden: ${i}">
+        <li class="hilo__paso" style="--hebra: var(--${integrante(e.autor)?.color ?? 'ink'}); --orden: ${i}"
+          ${i === eventos.length - 1 ? html`id="ultimo-evento" tabindex="-1"` : ''}>
           <span class="hilo__nodo" aria-hidden="true"></span>
           <p class="hilo__que"><strong>${textoEvento(e, s)}</strong> · <time datetime="${iso(e.fecha)}">${fechaHumana(e.fecha)}</time></p>
           ${e.texto ? html`<blockquote class="hilo__texto">${e.texto}</blockquote>` : ''}
         </li>`)}
-      ${pendientes(s).map((texto, i) => html`
+      ${pendientes(s, yoId).map((texto, i) => html`
         <li class="hilo__paso hilo__paso--pendiente" style="--orden: ${eventos.length + i}">
           <span class="hilo__nodo" aria-hidden="true"></span>
           <p class="hilo__que">${texto}<span class="visualmente-oculto"> (pendiente)</span></p>
         </li>`)}
     </ol>`;
+}
+
+// --- Acciones del detalle: una sola primaria, la que sigue en el hilo para quien mira (D3) ---
+
+// Lo que se escribe en la respuesta sobrevive si la pantalla se vuelve a pintar (otra pestaña)
+const borradoresRespuesta = {};
+
+function formularioRespuesta(s, yo, { primaria }) {
+  const autor = nombre(s.autor);
+  const decision = [...s.eventos].reverse().find((e) => e.tipo === 'decision' && e.autor !== yo.id);
+  const yaRespondi = respondio(s, yo.id);
+  const etiqueta = decision ? 'Dejar una observación' : yaRespondi ? 'Agregar algo a su respuesta' : 'Su respuesta';
+  const textoBoton = decision ? 'Enviar observación' : 'Enviar respuesta';
+  const titulo = decision ? `${nombre(decision.autor)} ya la atendió` : yaRespondi ? 'Usted ya respondió' : 'Responder';
+
+  return html`
+    <section class="tarjeta responder" aria-labelledby="titulo-responder" data-hu="HU26">
+      <h2 id="titulo-responder" class="titulo-chico">${titulo}</h2>
+      ${decision ? html`
+        <div class="aviso aviso--info" role="note">
+          ${icono('info-circle')}
+          <div>
+            <p><strong>${nombre(decision.autor)} decidió · ${fechaHumana(decision.fecha)}</strong></p>
+            <p>«${decision.texto}»</p>
+            <p class="texto-suave">Puede dejarle una observación para la próxima vez.</p>
+          </div>
+        </div>` : html`
+        <p class="texto-suave">${yaRespondi
+          ? `${autor} ya ve su respuesta en el hilo. Si quiere, puede agregar algo más.`
+          : `Responda cuando pueda. ${autor} verá su respuesta en el hilo.`}</p>`}
+      <form class="campo" id="form-responder" novalidate>
+        <label for="respuesta">${etiqueta}</label>
+        <textarea id="respuesta" name="respuesta" class="entrada entrada--larga" rows="4" maxlength="1000"
+          aria-invalid="false">${borradoresRespuesta[s.id] ?? ''}</textarea>
+        ${cajaError('respuesta')}
+        <div class="grupo-botones">
+          <button type="submit" class="boton ${primaria ? 'boton--primario' : 'boton--secundario'}">${icono('send')}${textoBoton}</button>
+        </div>
+      </form>
+    </section>`;
+}
+
+function acciones(s, yo) {
+  if (s.estado === 'cerrada') {
+    return html`
+      <section class="tarjeta tarjeta--apoyo cierre" aria-labelledby="titulo-cierre" data-hu="HU34">
+        <h2 id="titulo-cierre" class="titulo-chico" tabindex="-1">${icono('circle-check')} Esta situación quedó resuelta</h2>
+        <p>Si vuelve a pasar algo, puede abrirla otra vez. Todo lo anterior se mantiene en el hilo.</p>
+        <div class="grupo-botones">
+          <button type="button" class="boton boton--secundario" data-accion="reabrir">${icono('refresh')}Volver a abrir</button>
+        </div>
+      </section>`;
+  }
+
+  const soyDestino = s.enviadaA.includes(yo.id);
+  const debeResponder = soyDestino && !respondio(s, yo.id);
+  // Para quien registró, cerrar es el paso natural cuando ya le respondieron
+  const cerrarEsPrincipal = !soyDestino && s.estado === 'respondida';
+
+  return html`
+    ${soyDestino ? formularioRespuesta(s, yo, { primaria: debeResponder }) : ''}
+    <section class="acciones-detalle" aria-label="Otras acciones" data-hu="HU34">
+      <button type="button" class="boton ${cerrarEsPrincipal ? 'boton--primario' : 'boton--secundario'}" data-accion="cerrar">
+        ${icono('circle-check')}Cerrar situación
+      </button>
+      ${!cerrarEsPrincipal && !soyDestino ? html`<p class="texto-suave">Ciérrela cuando ya esté resuelta, aunque no le hayan respondido.</p>` : ''}
+    </section>`;
+}
+
+async function alAccionar(evento, s) {
+  const boton = evento.target.closest('[data-accion]');
+  if (!boton) return;
+
+  if (boton.dataset.accion === 'cerrar') {
+    const si = await confirmar({
+      titulo: '¿Cerrar esta situación?',
+      texto: 'La familia verá que ya quedó resuelta. Si hace falta, podrá volver a abrirla.',
+      accion: 'Sí, cerrar',
+      iconoAccion: 'circle-check',
+    });
+    if (!si) return;
+    cerrarSituacion(s.id);
+    document.getElementById('titulo-cierre')?.focus();
+    avisar('Listo. La familia verá que quedó resuelta.');
+  }
+
+  if (boton.dataset.accion === 'reabrir') {
+    const si = await confirmar({
+      titulo: '¿Volver a abrir esta situación?',
+      texto: 'La familia verá que todavía falta resolverla. Todo lo anterior se mantiene en el hilo.',
+      accion: 'Sí, volver a abrir',
+      iconoAccion: 'refresh',
+    });
+    if (!si) return;
+    reabrirSituacion(s.id);
+    document.getElementById('ultimo-evento')?.focus();
+    avisar('Listo. La situación está abierta otra vez.', { icono: 'refresh' });
+  }
 }
 
 export function vistaDetalle({ params }) {
@@ -581,7 +683,7 @@ export function vistaDetalle({ params }) {
             ${etiquetaCategoria(s.categoria)}
             ${s.importante ? etiquetaImportante() : ''}
           </div>
-          <h1>${s.titulo}</h1>
+          <h1 id="titulo-detalle" tabindex="-1">${s.titulo}</h1>
           <p class="detalle__meta">
             ${avatar(autor)}
             <span>Registrada por ${s.autor === yo.id ? 'usted' : autor?.nombre} · <time datetime="${iso(s.creadaEn)}">${fechaHumana(s.creadaEn)}</time></span>
@@ -597,8 +699,42 @@ export function vistaDetalle({ params }) {
         <section class="detalle__hilo" aria-labelledby="titulo-hilo">
           <h2 id="titulo-hilo">El hilo</h2>
           <p class="texto-suave">Quién la vio, qué respondió y qué falta.</p>
-          ${hilo(s)}
+          ${hilo(s, yo.id)}
         </section>
+
+        ${acciones(s, yo)}
       </article>`,
+
+    alMontar(contenedor) {
+      // HU29: al abrirla por primera vez, quien la escribió verá "Jorge la vio" (en vivo, en su pestaña)
+      if (debeMarcarRevisada(s, yo.id)) setTimeout(() => marcarRevisada(s.id, yo.id), 0);
+
+      contenedor.querySelector('.detalle').addEventListener('click', (evento) => alAccionar(evento, s));
+
+      const form = contenedor.querySelector('#form-responder');
+      if (!form) return;
+      const campo = form.querySelector('#respuesta');
+      const mensaje = `Escriba su respuesta para que ${nombre(s.autor)} sepa qué hacer.`;
+
+      campo.addEventListener('input', () => {
+        borradoresRespuesta[s.id] = campo.value;
+        if (campo.value.trim() && campo.getAttribute('aria-invalid') === 'true') limpiarError(campo);
+      });
+      form.addEventListener('submit', (evento) => {
+        evento.preventDefault();
+        if (!campo.value.trim()) {
+          mostrarError(campo, mensaje);
+          campo.focus();
+          return;
+        }
+        const observacion = s.eventos.some((e) => e.tipo === 'decision' && e.autor !== yo.id);
+        // El borrador se borra antes de guardar: guardar vuelve a pintar la pantalla
+        const texto = campo.value;
+        delete borradoresRespuesta[s.id];
+        responder(s.id, texto);
+        document.getElementById('ultimo-evento')?.focus();
+        avisar(`Listo. ${nombre(s.autor)} verá su ${observacion ? 'observación' : 'respuesta'} en el hilo.`);
+      });
+    },
   };
 }

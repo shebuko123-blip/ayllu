@@ -115,6 +115,30 @@ export function textoEstado(situacion, verPor = usuarioActivoId()) {
   }
 }
 
+/**
+ * Un aviso en palabras (G-03, HU29): "Jorge vio «Mía tiene fiebre…»", "Rosa le envió «…»".
+ * Se usa igual en el panel de Avisos y en el mensaje que aparece al llegar algo nuevo.
+ */
+export function textoAviso({ evento, situacion }, verPor = usuarioActivoId()) {
+  const quien = integrante(evento.autor)?.nombre ?? 'Alguien';
+  const titulo = `«${situacion.titulo}»`;
+  switch (evento.tipo) {
+    case 'enviada': return situacion.enviadaA.includes(verPor) ? `${quien} le envió ${titulo}` : `${quien} envió ${titulo}`;
+    case 'revisada': return `${quien} vio ${titulo}`;
+    case 'respuesta': return `${quien} respondió sobre ${titulo}`;
+    case 'decision': return `${quien} registró una decisión sobre ${titulo}`;
+    case 'cerrada': return `${quien} cerró ${titulo}`;
+    case 'reabierta': return `${quien} volvió a abrir ${titulo}`;
+    case 'corregida': return `${quien} corrigió ${titulo}`;
+    default: return `${quien} actualizó ${titulo}`;
+  }
+}
+
+export const ICONO_AVISO = {
+  enviada: 'send', revisada: 'eye', respuesta: 'message', decision: 'check',
+  cerrada: 'circle-check', reabierta: 'refresh', corregida: 'pencil',
+};
+
 export function etiquetaEstado(situacion, verPor) {
   const estado = situacion.estado;
   return html`<span class="etiqueta etiqueta--${estado}" data-hu="HU29 HU33">${icono(ICONO_ESTADO[estado] ?? 'info-circle')}${textoEstado(situacion, verPor)}</span>`;

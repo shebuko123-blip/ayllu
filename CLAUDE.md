@@ -59,12 +59,12 @@ Si `main.js` crece demasiado, se pueden agregar módulos en `js/` (por ejemplo `
     audio: null | { url, duracion }, transcripcion: null | "texto",
     autor, creadaEn,                                        // ISO 8601
     enviadaA: ["jorge"], revisadaPor: { jorge: "2026-11-24T21:40:00" },
-    eventos: [{ tipo: "registrada" | "enviada" | "revisada" | "respuesta" | "decision" | "cerrada" | "corregida", autor, fecha, texto }],
+    eventos: [{ tipo: "registrada" | "enviada" | "revisada" | "respuesta" | "decision" | "cerrada" | "reabierta" | "corregida", autor, fecha, texto }],
     estado: "registrada" | "enviada" | "revisada" | "respondida" | "cerrada"
   }],
   acuerdos: [{ id, tema, tipo: "puede-resolver" | "consultar", autor, fecha, historial: [] }],
   preferencias: { tamanoLetra: "normal" | "grande" | "muy-grande", altoContraste: false, ayudasPasos: true },
-  ultimaVisita: { jorge: "…", rosa: "…" }
+  ultimaVisita: { jorge: "…", rosa: "…" }                 // se actualiza al cerrar el panel de Avisos: lo anterior cuenta como visto
 }
 ```
 

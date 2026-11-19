@@ -1338,6 +1338,92 @@ html[data-contrast="alto"] .pasos__segmento { outline: 1px solid var(--secondary
   background: var(--surface);
 }
 
+.hilo__paso:focus { outline: none; }
+.hilo__paso:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; border-radius: var(--radius-sm); }
+
+/* --- Coordinación en el detalle (fase 3) --- */
+.responder { display: grid; gap: var(--space-4); }
+.responder .grupo-botones { margin-block-start: var(--space-2); }
+.acciones-detalle { display: grid; justify-items: start; gap: var(--space-2); }
+.cierre { display: grid; gap: var(--space-3); }
+.cierre h2 { display: flex; align-items: center; gap: var(--space-2); }
+.cierre h2:focus { outline: none; }
+.cierre h2 .icono { color: var(--secondary-deep); }
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+}
+.aviso > .icono { inline-size: 1.5rem; block-size: 1.5rem; margin-block-start: 0.1em; }
+.aviso > div { display: grid; gap: var(--space-1); }
+.aviso--info { background: var(--info-tint); color: var(--info-ink); }
+.aviso--info .texto-suave { color: var(--info-ink); }
+html[data-contrast="alto"] .aviso { outline: 1px solid var(--ink); }
+
+/* --- Avisos (G-03) --- */
+.lista-avisos { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.aviso-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-block-size: var(--touch-min);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  text-decoration: none;
+}
+.aviso-item:hover { background: var(--surface-alt); }
+.aviso-item--nuevo { background: var(--highlight-tint); }
+.aviso-item--nuevo:hover { background: var(--surface-alt); }
+.aviso-item__texto { display: grid; gap: var(--space-1); line-height: 1.4; }
+.aviso-item__fecha { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); color: var(--ink-muted); font-size: var(--fs-small); }
+.etiqueta--nuevo { min-block-size: 1.6rem; padding-block: 0; background: var(--ink); color: var(--canvas); }
+
+/* --- Inicio (fase 3) --- */
+.bloque--espacioso { gap: var(--space-12); }
+.bloque__cabecera h2 { font-size: var(--fs-h2); }
+.lista-situaciones--una { grid-template-columns: 1fr !important; }
+
+.lista-pendientes { display: grid; margin: 0; padding: 0; list-style: none; border-block-start: 1px solid var(--border); }
+.pendiente {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-2);
+  border-block-end: 1px solid var(--border);
+}
+.pendiente--importante { padding-inline-start: var(--space-4); border-inline-start: 6px solid var(--highlight); }
+.pendiente__titulo a { color: var(--ink); text-decoration: none; }
+.pendiente__titulo a::after { content: ""; position: absolute; inset: 0; }
+.pendiente__titulo a:hover { text-decoration: underline; }
+.pendiente__titulo a:focus-visible { outline: none; }
+.pendiente:has(a:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.pendiente:hover { background: var(--surface-alt); }
+.pendiente__meta { color: var(--ink-muted); font-size: var(--fs-small); }
+.al-dia { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); border-radius: var(--radius-md); background: var(--success-tint); color: var(--secondary-deep); font-weight: 700; }
+.al-dia .icono { inline-size: 1.5rem; block-size: 1.5rem; }
+
+.accesos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.acceso {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: 4.5rem;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+.acceso:hover { background: var(--surface-alt); border-color: var(--ink); }
+.acceso .opcion-categoria__icono { grid-row: auto; inline-size: 2.75rem; block-size: 2.75rem; flex: none; }
+.acceso .opcion-categoria__icono .icono { inline-size: 1.5rem; block-size: 1.5rem; }
+
 /* Se dibuja una sola vez al abrir la situación (y nunca con movimiento reducido) */
 @media (prefers-reduced-motion: no-preference) {
   .hilo--dibujar .hilo__paso { animation: hilo-aparece var(--dur) var(--ease-out) both; animation-delay: calc(var(--orden) * 90ms); }

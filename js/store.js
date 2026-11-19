@@ -50,20 +50,24 @@ export function actualizar(cambio) {
   return guardado;
 }
 
-/** Llama a fn(estado, origen) cada vez que algo cambia, aquí o en otra pestaña. */
+/**
+ * Llama a fn(estado, origen, anterior) cada vez que algo cambia, aquí o en otra pestaña.
+ * "anterior" permite saber qué es nuevo (por ejemplo, para avisar "Jorge la vio").
+ */
 export function suscribir(fn) {
   suscriptores.add(fn);
   return () => suscriptores.delete(fn);
 }
 
-function emitir(origen) {
-  for (const fn of suscriptores) fn(estado, origen);
+function emitir(origen, anterior = null) {
+  for (const fn of suscriptores) fn(estado, origen, anterior);
 }
 
 window.addEventListener('storage', (evento) => {
   if (evento.key !== CLAVE && evento.key !== null) return;
+  const anterior = estado;
   estado = evento.newValue ? JSON.parse(evento.newValue) : cargar();
-  emitir('otra-pestana');
+  emitir('otra-pestana', anterior);
 });
 
 // --- Persona activa (Ver como) ----------------------------------------------
@@ -162,6 +166,117 @@ export function registrarSituacion({ categoria, titulo, descripcion = '', import
     });
   });
   return { id, guardado };
+}
+
+// --- Coordinación: el ciclo de una situación (HU26, HU29, HU33, HU34) ---------
+// registrada → enviada → revisada → respondida → cerrada, y cerrada → (abierta otra vez).
+// Cada cambio agrega un evento al hilo: nada se borra, todo queda con autor y fecha.
+
+function agregarEvento(s, tipo, autor, texto = '') {
+  s.eventos.push({ tipo, autor, fecha: new Date().toISOString(), texto });
+}
+
+function cambiarSituacion(id, cambio) {
+  return actualizar((datos) => {
+    const s = datos.situaciones.find((x) => x.id === id);
+    if (s) cambio(s, datos);
+  });
+}
+
+export function respondio(s, personaId) {
+  return s.eventos.some((e) => e.tipo === 'respuesta' && e.autor === personaId);
+}
+
+/** La persona que mira es destinataria y aún no había abierto la situación (HU29). */
+export function debeMarcarRevisada(s, personaId = usuarioActivoId()) {
+  return Boolean(s && s.enviadaA.includes(personaId) && !s.revisadaPor?.[personaId]);
+}
+
+export function marcarRevisada(id, personaId = usuarioActivoId()) {
+  return cambiarSituacion(id, (s) => {
+    if (!debeMarcarRevisada(s, personaId)) return;
+    s.revisadaPor = { ...s.revisadaPor, [personaId]: new Date().toISOString() };
+    agregarEvento(s, 'revisada', personaId);
+    if (s.estado === 'enviada') s.estado = 'revisada';
+  });
+}
+
+/** Respuesta de un destinatario (HU26). Si alguien ya decidió, queda como observación (CA04). */
+export function responder(id, texto, personaId = usuarioActivoId()) {
+  return cambiarSituacion(id, (s) => {
+    if (!s.revisadaPor?.[personaId]) {
+      s.revisadaPor = { ...s.revisadaPor, [personaId]: new Date().toISOString() };
+      agregarEvento(s, 'revisada', personaId);
+    }
+    agregarEvento(s, 'respuesta', personaId, texto.trim());
+    if (s.estado !== 'cerrada') s.estado = 'respondida';
+  });
+}
+
+export function cerrarSituacion(id, personaId = usuarioActivoId()) {
+  return cambiarSituacion(id, (s) => {
+    agregarEvento(s, 'cerrada', personaId);
+    s.estado = 'cerrada';
+  });
+}
+
+/** Al volver a abrir, la situación recupera el estado que tenía antes de cerrarse. */
+export function reabrirSituacion(id, personaId = usuarioActivoId()) {
+  return cambiarSituacion(id, (s) => {
+    agregarEvento(s, 'reabierta', personaId);
+    s.estado = estadoAbierto(s);
+  });
+}
+
+function estadoAbierto(s) {
+  if (s.eventos.some((e) => e.tipo === 'respuesta')) return 'respondida';
+  if (s.enviadaA.some((id) => s.revisadaPor?.[id])) return 'revisada';
+  return s.enviadaA.length ? 'enviada' : 'registrada';
+}
+
+/**
+ * HU38 · Lo que espera la respuesta de una persona: enviado a ella, abierto y sin su respuesta.
+ * Primero las importantes; después, las que llevan más tiempo esperando.
+ */
+export function pendientesDe(personaId = usuarioActivoId()) {
+  return leer().situaciones
+    .filter((s) => s.enviadaA.includes(personaId) && s.estado !== 'cerrada' && !respondio(s, personaId))
+    .sort((a, b) => (b.importante - a.importante) || a.creadaEn.localeCompare(b.creadaEn));
+}
+
+// --- Avisos (G-03): lo que hicieron los demás --------------------------------------
+
+const TIPOS_AVISO = new Set(['enviada', 'revisada', 'respuesta', 'decision', 'cerrada', 'reabierta', 'corregida']);
+
+/** Eventos de otras personas que le importan a quien mira, del más reciente al más antiguo. */
+export function avisosPara(personaId = usuarioActivoId(), datos = leer()) {
+  return datos.situaciones
+    .filter((s) => s.autor === personaId || s.enviadaA.includes(personaId))
+    .flatMap((s) => s.eventos
+      .filter((e) => e.autor !== personaId && TIPOS_AVISO.has(e.tipo))
+      // "Jorge la vio" solo le interesa a quien la escribió
+      .filter((e) => e.tipo !== 'revisada' || s.autor === personaId)
+      .map((e) => ({ evento: e, situacion: s })))
+    .sort((a, b) => b.evento.fecha.localeCompare(a.evento.fecha));
+}
+
+/** Avisos que llegaron después de la última vez que la persona abrió Avisos. */
+export function avisosNuevos(personaId = usuarioActivoId()) {
+  const desde = leer().ultimaVisita?.[personaId] ?? '';
+  return avisosPara(personaId).filter((a) => a.evento.fecha > desde);
+}
+
+export function marcarAvisosVistos(personaId = usuarioActivoId()) {
+  return actualizar((datos) => {
+    datos.ultimaVisita = { ...datos.ultimaVisita, [personaId]: new Date().toISOString() };
+  });
+}
+
+/** Lo que otra pestaña acaba de hacer y le importa a quien mira (para avisarle al instante). */
+export function eventosRecientes(anterior, personaId = usuarioActivoId()) {
+  if (!anterior) return [];
+  const antes = new Set(avisosPara(personaId, anterior).map((a) => `${a.situacion.id}|${a.evento.tipo}|${a.evento.fecha}`));
+  return avisosPara(personaId).filter((a) => !antes.has(`${a.situacion.id}|${a.evento.tipo}|${a.evento.fecha}`));
 }
 
 // --- Preferencias (HU41, HU42, HU46) ----------------------------------------

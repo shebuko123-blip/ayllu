@@ -3,10 +3,14 @@
 
 import {
   leer, suscribir, usuarioActivo, usuarioActivoId, verComo, personasDemo,
-  preferencias, guardarPreferencia, restaurarEjemplo,
+  preferencias, guardarPreferencia, restaurarEjemplo, integrante,
+  avisosPara, avisosNuevos, marcarAvisosVistos, eventosRecientes,
 } from './store.js';
 import { definirRuta, definirNoEncontrada, iniciarRouter, refrescar } from './router.js';
-import { html, pintar, avatar, iniciales, nombreRol, confirmar, avisar, anunciar, cabecera, icono } from './ui.js';
+import {
+  html, pintar, avatar, iniciales, nombreRol, confirmar, avisar, anunciar, cabecera, icono, textoAviso, ICONO_AVISO,
+} from './ui.js';
+import { fechaHumana, hora } from './fechas.js';
 import { puedeLeer, leerEnVozAlta, detenerLectura } from './voz.js';
 import { vistaInicio } from './vistas/inicio.js';
 import { vistaSituaciones, vistaRegistrar, vistaDetalle } from './vistas/situaciones.js';
@@ -131,11 +135,64 @@ $('opciones-persona').addEventListener('change', (evento) => {
   avisar(`Ahora ve AYLLU como ${persona.nombre}.`, { icono: 'user' });
 });
 
+// --- Avisos (G-03): lo que hizo la familia, con los nuevos marcados (HU29) ----------------------
+
+const MAX_AVISOS = 8;
+
 function pintarAvisos() {
-  // Fase 3 y 7: novedades reales desde la última visita (HU24, HU29)
+  const yo = usuarioActivoId();
+  const todos = avisosPara(yo).slice(0, MAX_AVISOS);
+  const nuevos = new Set(avisosNuevos(yo).map((a) => a.evento));
+  const n = avisosNuevos(yo).length;
+
+  pintar($('contador-avisos'), n ? html`${n}<span class="visualmente-oculto"> ${n === 1 ? 'nuevo' : 'nuevos'}</span>` : html``);
+
+  if (!todos.length) {
+    pintar($('lista-avisos'), html`
+      <p class="texto-suave">Aquí verá las respuestas y novedades de su familia en cuanto lleguen.</p>`);
+    return;
+  }
+
   pintar($('lista-avisos'), html`
-    <p class="texto-suave">Aquí verá las respuestas y novedades de su familia en cuanto lleguen.</p>`);
-  $('contador-avisos').textContent = '';
+    <p class="texto-suave">${n ? `Tiene ${n} ${n === 1 ? 'aviso nuevo' : 'avisos nuevos'}.` : 'Está al día. Estos son los últimos avisos.'}</p>
+    <ul class="lista-avisos">
+      ${todos.map((a) => html`
+        <li>
+          <a class="aviso-item ${nuevos.has(a.evento) ? 'aviso-item--nuevo' : ''}" href="#/situaciones/${a.situacion.id}">
+            ${avatar(integrante(a.evento.autor))}
+            <span class="aviso-item__texto">
+              <span>${textoAviso(a, yo)}</span>
+              <span class="aviso-item__fecha">
+                ${icono(ICONO_AVISO[a.evento.tipo] ?? 'bell')}
+                <time datetime="${a.evento.fecha}">${fechaHumana(a.evento.fecha)}</time>
+                ${nuevos.has(a.evento) ? html`<span class="etiqueta etiqueta--nuevo">Nuevo</span>` : ''}
+              </span>
+            </span>
+          </a>
+        </li>`)}
+    </ul>`);
+}
+
+// Al cerrar Avisos, lo nuevo pasa a visto (el número se borra)
+$('panel-avisos').addEventListener('toggle', (evento) => {
+  if (evento.newState === 'closed' && avisosNuevos().length) marcarAvisosVistos();
+});
+// Al elegir un aviso se cierra el panel
+$('lista-avisos').addEventListener('click', (evento) => {
+  if (evento.target.closest('a')) $('panel-avisos').hidePopover();
+});
+
+/**
+ * HU29 CA03: lo que la familia hace en otra pestaña aparece al instante, sin recargar:
+ * se vuelve a pintar la pantalla y un mensaje dice qué pasó ("Jorge vio «…» · 9:40 p. m.").
+ */
+function avisarCambiosDeOtraPestana(anterior) {
+  const recientes = eventosRecientes(anterior);
+  for (const a of recientes.slice(0, 3).reverse()) {
+    const cuando = a.evento.tipo === 'revisada' ? ` · ${hora(a.evento.fecha)}` : '';
+    const frase = `${textoAviso(a)}${cuando}`;
+    avisar(frase.endsWith('.') ? frase : `${frase}.`, { icono: ICONO_AVISO[a.evento.tipo] ?? 'bell' });
+  }
 }
 
 // aria-expanded acompaña al estado de cada panel
@@ -207,10 +264,10 @@ function pintarTodo() {
   pintarAvisos();
 }
 
-suscribir((_, origen) => {
+suscribir((_, origen, anterior) => {
   pintarTodo();
   refrescar();
-  if (origen === 'otra-pestana') anunciar('Hay cambios de su familia en esta pantalla.');
+  if (origen === 'otra-pestana') avisarCambiosDeOtraPestana(anterior);
 });
 
 pintarTodo();
