@@ -153,6 +153,56 @@ export function cabecera(titulo, texto) {
     </div>`;
 }
 
+/** "Jorge", "Jorge y Ana", "Jorge, Ana y Luis". */
+const formatoLista = new Intl.ListFormat('es', { style: 'long', type: 'conjunction' });
+export function listaNombres(nombres) {
+  return formatoLista.format(nombres);
+}
+
+// --- Errores en los campos ------------------------------------------------------------
+// El error se muestra solo después de que la persona tocó el campo o intentó avanzar:
+// nada de errores al abrir la pantalla ni mientras escribe (heurística 5).
+// Marcado esperado: el campo tiene id="x" y, junto a él, <p class="campo__error" id="x-error" hidden>.
+// El mensaje se enlaza con aria-describedby solo mientras se ve (si no, se leería aunque esté oculto).
+
+function enlazarError(control, idError, visible) {
+  const ids = (control.getAttribute('aria-describedby') || '').split(/\s+/).filter((id) => id && id !== idError);
+  if (visible) ids.push(idError);
+  if (ids.length) control.setAttribute('aria-describedby', ids.join(' '));
+  else control.removeAttribute('aria-describedby');
+}
+
+/**
+ * Muestra el error de un campo: borde, ícono y texto (nunca solo color).
+ * control puede ser un <input>/<textarea> o un <fieldset> (grupo de opciones).
+ * Con anunciarlo, el lector de pantalla lo lee un momento después (al salir del campo).
+ */
+export function mostrarError(control, mensaje, { anunciarlo = false } = {}) {
+  const idError = `${control.id}-error`;
+  const caja = document.getElementById(idError);
+  if (!caja) return;
+  pintar(caja, html`${icono('alert-circle')}<span><span class="visualmente-oculto">Falta un dato: </span>${mensaje}</span>`);
+  caja.hidden = false;
+  control.closest('.campo')?.classList.add('campo--error');
+  if (control.matches('input, textarea, select')) control.setAttribute('aria-invalid', 'true');
+  enlazarError(control, idError, true);
+  if (anunciarlo) setTimeout(() => anunciar(mensaje), 500);
+}
+
+export function limpiarError(control) {
+  const idError = `${control.id}-error`;
+  const caja = document.getElementById(idError);
+  if (caja) caja.hidden = true;
+  control.closest('.campo')?.classList.remove('campo--error');
+  if (control.matches('input, textarea, select')) control.setAttribute('aria-invalid', 'false');
+  enlazarError(control, idError, false);
+}
+
+/** Caja vacía donde aparece el error de un campo. */
+export function cajaError(idCampo) {
+  return html`<p class="campo__error" id="${idCampo}-error" hidden></p>`;
+}
+
 // --- Anuncios para lectores de pantalla ------------------------------------------------
 
 /** Texto que el lector de pantalla lee sin mover el foco. */

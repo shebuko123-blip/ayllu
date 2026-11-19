@@ -100,6 +100,70 @@ export function esCuidador(persona = usuarioActivo()) {
   return persona?.rol === 'abuela' || persona?.rol === 'abuelo';
 }
 
+// --- Situaciones (HU09, HU10, HU15, HU17, HU25) -------------------------------
+
+export function situacion(id) {
+  return leer().situaciones.find((s) => s.id === id) ?? null;
+}
+
+/** De la más reciente a la más antigua. */
+export function situacionesOrdenadas() {
+  return [...leer().situaciones].sort((a, b) => b.creadaEn.localeCompare(a.creadaEn));
+}
+
+/** Enviada y todavía sin respuesta ni cierre. */
+export function esperaRespuesta(s) {
+  return s.estado === 'enviada' || s.estado === 'revisada';
+}
+
+/**
+ * A quién se envía por defecto lo que registra una persona (HU25):
+ * la cuidadora escribe a los padres; los padres, a la cuidadora.
+ */
+export function destinatariosPosibles(autorId = usuarioActivoId()) {
+  return leer().integrantes.filter((i) => i.estado === 'activo' && i.id !== autorId);
+}
+
+export function destinatariosPorDefecto(autorId = usuarioActivoId()) {
+  const autor = integrante(autorId);
+  const posibles = destinatariosPosibles(autorId);
+  const padres = posibles.filter((i) => i.rol === 'padre' || i.rol === 'madre');
+  const cuidadores = posibles.filter((i) => i.rol === 'abuela' || i.rol === 'abuelo');
+  const elegidos = esCuidador(autor) ? padres : cuidadores;
+  return (elegidos.length ? elegidos : posibles.slice(0, 1)).map((i) => i.id);
+}
+
+/**
+ * Guarda una situación nueva y la envía (eventos "registrada" y "enviada").
+ * Devuelve { id, guardado }: guardado es false si el navegador no pudo guardarla (queda solo en esta pestaña).
+ */
+export function registrarSituacion({ categoria, titulo, descripcion = '', importante = false, enviadaA = [] }) {
+  const autor = usuarioActivoId();
+  const ahora = new Date().toISOString();
+  const id = `s-${Date.now().toString(36)}`;
+  const eventos = [{ tipo: 'registrada', autor, fecha: ahora, texto: '' }];
+  if (enviadaA.length) eventos.push({ tipo: 'enviada', autor, fecha: ahora, texto: '' });
+
+  const guardado = actualizar((s) => {
+    s.situaciones.push({
+      id,
+      categoria,
+      titulo: titulo.trim(),
+      descripcion: descripcion.trim(),
+      importante: Boolean(importante),
+      audio: null,
+      transcripcion: null,
+      autor,
+      creadaEn: ahora,
+      enviadaA: [...enviadaA],
+      revisadaPor: {},
+      eventos,
+      estado: enviadaA.length ? 'enviada' : 'registrada',
+    });
+  });
+  return { id, guardado };
+}
+
 // --- Preferencias (HU41, HU42, HU46) ----------------------------------------
 
 export function preferencias() {
