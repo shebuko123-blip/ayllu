@@ -78,7 +78,7 @@ No cambies los nombres de los campos sin actualizar este archivo.
 - **Todo en `rem`.** El tamaño de letra (HU41) se controla con `data-text-size` en `<html>`; el alto contraste (HU42), con `data-contrast="alto"`.
 - **Una sola acción terracota (primaria) por pantalla.**
 - **Ícono + texto** en navegación y botones. Nada de navegación solo con íconos ni menú hamburguesa para las secciones.
-- Web: barra superior con 4 secciones. Móvil (< 640 px): barra inferior con 4 secciones y el botón central "Registrar".
+- Escritorio (≥ 1280 px): barra superior de una fila con 4 secciones. Tablet y móvil (< 1280 px): barra superior simple y barra inferior con 4 secciones y el botón central "Registrar".
 - Cada detalle de situación muestra **el hilo** (línea de tiempo) como `<ol>`.
 - Las acciones que cambian información pasan por el **modal de confirmación** (HU48) y terminan con un toast tranquilizador.
 

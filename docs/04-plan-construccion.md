@@ -120,9 +120,8 @@ Cada fase indica su objetivo, las HU que cubre, las tareas, los archivos que toc
 - [ ] `styles.css`: tokens del *Quick Start* de `DESIGN.md`, tipos, base (`body`, encabezados, foco, `prefers-reduced-motion`), alto contraste.
 - [ ] `app.html`: `lang="es-PE"`, enlace "Saltar al contenido", `<header>`, `<nav>`, `<main id="contenido" tabindex="-1">`.
 - [ ] **Navegación responsive** con los mismos 4 enlaces reubicados por CSS:
-  - ≥ 1024 px: barra superior completa con franja tejida.
-  - 640–1023 px: secciones en segunda fila y "Registrar situación" fijo abajo a la derecha.
-  - < 640 px: barra inferior de 72 px con "Registrar" central de 64 px. `padding-bottom` en `<main>` para que nada quede debajo y `scroll-padding` para que el foco nunca quede tapado (WCAG 2.4.11).
+  - ≥ 1280 px: barra superior completa de una fila con franja tejida.
+  - < 1280 px (tablet, laptop pequeña y móvil): barra superior simple de una fila y barra inferior de 72 px con "Registrar" central de 64 px. `padding-bottom` en `<main>` para que nada quede debajo y `scroll-padding` para que el foco nunca quede tapado (WCAG 2.4.11).
   - Con letra "Muy grande", las secciones bajan a una segunda fila en vez de ocultarse.
 - [ ] Botones (primario, secundario, fantasma, peligro), campos, tarjetas, etiquetas de categoría y de estado y estado vacío, en `ui.js` y `styles.css`.
 - [ ] **HU41 · Panel Aa:** botón "Aa" que abre un panel (popover) con Normal, Grande y Muy grande, cada uno con vista previa. Escribe `data-text-size` en `<html>` y guarda en `preferencias.tamanoLetra`. Un *script* pequeño en `<head>` aplica la preferencia antes de pintar la página, para que no parpadee. Se nota el cambio en la misma pantalla (CA02).

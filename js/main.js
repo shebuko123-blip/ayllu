@@ -178,7 +178,7 @@ document.querySelector('.saltar').addEventListener('click', (evento) => {
 
 const barra = $('barra');
 const fila = barra.querySelector('.barra__fila');
-const escritorio = matchMedia('(min-width: 64em)');
+const escritorio = matchMedia('(min-width: 80em)');
 let anchoMedido = 0;
 
 function medirBarra() {

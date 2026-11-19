@@ -378,16 +378,35 @@ main:focus { outline: none; }
 
 .solo-amplio { display: none; }
 
-/* "Registrar situación" vive en tres lugares según el ancho; solo uno se ve a la vez.
+/* "Registrar situación" vive en dos lugares según el ancho; solo uno se ve a la vez:
+   en la barra superior (escritorio) o al centro de la barra inferior (tablet y móvil).
    (.boton.… para ganarle a .boton { display: inline-flex }) */
-.boton.registrar-barra,
-.boton.registrar-flotante { display: none; }
+.boton.registrar-barra { display: none; }
 
-/* --- Escritorio (≥ 1024 px): una fila ------------------------------------ */
-@media (min-width: 64em) {
+/* Herramientas (Letra, Avisos, Ayuda, persona): el nombre debajo del ícono, en todos
+   los anchos. Nunca íconos solos, y ocupan la mitad que con el texto al lado. */
+.acciones { gap: var(--space-1); }
+.acciones .boton-barra {
+  flex-direction: column;
+  gap: 0.125rem;
+  min-inline-size: 3.5rem;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-small);
+  line-height: 1.1;
+}
+.acciones .avatar { inline-size: 1.6rem; block-size: 1.6rem; }
+.acciones .boton-aa__letras { font-size: 1.15rem; }
+.boton-barra .contador { inset-inline-end: 0; }
+
+/* --- Escritorio (≥ 1280 px): una fila ------------------------------------
+   Con letra normal todo cabe en una fila desde 1280 px. Más angosto, se usa
+   el esquema de tablet (barra inferior) en vez de partir la barra en dos. */
+@media (min-width: 80em) {
   .solo-amplio { display: inline; }
-  .barra__fila { flex-wrap: nowrap; }
+  .barra__fila { flex-wrap: nowrap; gap: var(--space-2) var(--space-3); }
   .barra__fila > * { flex-shrink: 0; }
+  .seccion { padding-inline: var(--space-2); }
   .logo { order: 0; }
   .secciones { order: 1; flex: 1; display: flex; justify-content: center; }
   .boton.registrar-barra { display: inline-flex; order: 2; }
@@ -402,46 +421,13 @@ main:focus { outline: none; }
   .barra--dos-filas .registrar-barra { order: 4; }
 }
 
-/* --- Tablet (640–1023 px): secciones en segunda fila ---------------------- */
-@media (min-width: 40em) and (max-width: 63.999em) {
-  .secciones { order: 3; flex-basis: 100%; }
-  .secciones__lista { flex-wrap: wrap; }
-}
-
-/* Botón flotante "Registrar situación" (tablet) */
-@media (min-width: 40em) and (max-width: 63.999em) {
-  .boton.registrar-flotante {
-    display: inline-flex;
-    position: fixed;
-    inset-inline-end: var(--gutter);
-    inset-block-end: var(--space-6);
-    z-index: 15;
-    box-shadow: var(--shadow-floating);
-  }
-  main { padding-block-end: calc(var(--space-24) + var(--space-8)); }
-}
-
-/* --- Móvil (< 640 px): barra inferior con 5 espacios ---------------------- */
+/* --- Tablet, laptop pequeña y móvil (< 1280 px): barra superior simple + barra inferior ---
+   Una sola fila arriba (logo y herramientas) y las 4 secciones abajo, al alcance
+   del pulgar. Así la barra no necesita una segunda fila. */
 .registrar-inferior { display: none; }
 
-@media (max-width: 39.999em) {
-  /* Acciones con el nombre debajo del ícono: nunca íconos solos */
-  .barra__fila { gap: var(--space-1) var(--space-2); }
-  .logo span { font-size: 1.333rem; }
-  .logo img { inline-size: 1.75rem; block-size: 1.75rem; }
-  .acciones { gap: 0; }
-  .acciones .boton-barra {
-    flex-direction: column;
-    gap: 0.125rem;
-    min-inline-size: 3.25rem;
-    padding: var(--space-1) var(--space-1);
-    border-radius: var(--radius-md);
-    font-size: var(--fs-small);
-    line-height: 1.1;
-  }
-  .acciones .avatar { inline-size: 1.6rem; block-size: 1.6rem; }
-  .acciones .boton-aa__letras { font-size: 1.15rem; }
-  .boton-barra .contador { inset-inline-end: 0; }
+@media (max-width: 79.999em) {
+  .barra__fila { flex-wrap: nowrap; gap: var(--space-2); }
 
   .secciones {
     position: fixed;
@@ -455,11 +441,13 @@ main:focus { outline: none; }
   }
   .secciones__lista {
     display: grid;
-    grid-template-columns: repeat(5, auto);
+    grid-template-columns: repeat(5, minmax(0, 1fr));   /* 5 espacios iguales */
     justify-content: space-between;
     align-items: end;
     gap: 0;
+    max-inline-size: 40rem;   /* en tablet no se estira de borde a borde */
     min-block-size: var(--bar-h);
+    margin-inline: auto;
     padding-inline: var(--space-1);
   }
   .secciones__lista > li { display: flex; justify-content: center; min-inline-size: 0; }
@@ -526,7 +514,20 @@ main:focus { outline: none; }
   html { scroll-padding-block-end: calc(var(--bar-h) + var(--space-6)); }
 }
 
-/* Pantallas muy angostas: solo el símbolo del logo ("ayllu" sigue como nombre accesible) */
+/* --- Móvil (< 640 px): herramientas compactas para que la barra sea de una fila ---
+   El nombre va debajo del ícono: nunca íconos solos. */
+@media (max-width: 39.999em) {
+  /* Si con letra grande no cabe en una fila, las herramientas bajan a la siguiente: nunca se esconden */
+  .barra__fila { flex-wrap: wrap; gap: var(--space-1); padding-block: var(--space-1); }
+  .logo span { font-size: 1.333rem; }
+  .logo img { inline-size: 1.75rem; block-size: 1.75rem; }
+  .acciones .boton-barra {
+    min-inline-size: 2.667rem;   /* 48 px con letra normal; crece con la letra */
+    padding-inline: 0.125rem;
+  }
+}
+
+/* Pantallas angostas: solo el símbolo del logo ("ayllu" sigue como nombre accesible) */
 @media (max-width: 27em) {
   .logo span {
     position: absolute;
@@ -536,7 +537,7 @@ main:focus { outline: none; }
     clip-path: inset(50%);
     white-space: nowrap;
   }
-  .logo { padding-inline-end: 0; min-inline-size: var(--touch-min); justify-content: center; }
+  .logo { padding-inline-end: 0; min-inline-size: 2.667rem; justify-content: center; }
 }
 
 /* 5. COMPONENTES =========================================================== */
@@ -761,12 +762,12 @@ dialog:modal::backdrop {
 .panel__seccion + .panel__seccion { padding-block-start: var(--space-6); border-block-start: 1px solid var(--border); }
 .panel__titulo { font-weight: 700; }
 
+/* Con barra inferior (< 1280 px) el panel no la tapa */
+@media (max-width: 79.999em) {
+  .panel { max-block-size: calc(100dvh - var(--alto-barra, var(--bar-h)) - var(--bar-h) - var(--space-8)); }
+}
 @media (max-width: 39.999em) {
-  .panel {
-    inset-inline: var(--space-4);
-    inline-size: auto;
-    max-block-size: calc(100dvh - var(--alto-barra, var(--bar-h)) - var(--bar-h) - var(--space-8));
-  }
+  .panel { inset-inline: var(--space-4); inline-size: auto; }
 }
 
 /* Tamaños de letra como opciones con vista previa */
@@ -888,7 +889,7 @@ dialog:modal::backdrop {
   pointer-events: none;
 }
 .toasts:is(:popover-open, .\:popover-open) { display: grid; }
-@media (max-width: 39.999em) {
+@media (max-width: 79.999em) {
   .toasts { inset-block-end: calc(var(--bar-h) + var(--space-4) + env(safe-area-inset-bottom)); }
 }
 .toast {

@@ -159,9 +159,9 @@ Si en una pantalla el terracota o el maíz ocupan más que algunos puntos de ate
 ## Layout
 
 - **Retícula base de 4 px.** Espaciados: 4, 8, 12, 16, 24, 32, 48, 64, 96.
-- **Escritorio (≥ 1024 px):** barra superior fija de 72 px, contenido centrado con un máximo de 1120 px y márgenes de 32 px. En Inicio, una columna principal (2/3) con lo urgente y una lateral (1/3) con la familia.
-- **Tablet (640–1023 px):** barra superior compacta y una sola columna.
-- **Móvil (< 640 px):** barra superior simple (logo, "Aa" y avisos), **barra inferior fija de 72 px** con 4 secciones y el botón central "Registrar", márgenes de 16 px y una sola columna.
+- **Escritorio (≥ 1280 px):** barra superior fija de una fila, contenido centrado con un máximo de 1120 px y márgenes de 32 px.
+- **Tablet y laptop pequeña (640–1279 px):** barra superior simple (logo, Letra, Avisos, Ayuda y persona) y **barra inferior fija de 72 px**, centrada y de 640 px como máximo. Márgenes de 32 px. Desde 1024 px, Inicio usa una columna principal (2/3) con lo urgente y una lateral (1/3) con la familia; en menos, una sola columna.
+- **Móvil (< 640 px):** la misma barra superior simple, **barra inferior fija de 72 px** con 4 secciones y el botón central "Registrar", márgenes de 16 px y una sola columna.
 - **Una tarea por pantalla.** Los formularios largos se dividen en pasos (HU46) con indicador "Paso 2 de 3".
 - **La acción principal siempre a la vista:** al final del formulario en escritorio y fija sobre la barra inferior en móvil.
 - **Espacio generoso:** 24 px entre elementos relacionados y 48 px entre secciones.
@@ -212,10 +212,11 @@ AYLLU es **casi plano**. La profundidad viene del contraste entre crema y blanco
 
 **Barra superior (web)**
 - Logo a la izquierda; cuatro secciones con ícono y texto al centro (Inicio, Situaciones, Acuerdos, Familia), con la sección activa subrayada en verde molle de 3 px y `aria-current="page"`.
-- A la derecha: botón primario "Registrar situación", botón "Aa" (tamaño de letra y contraste), avisos y menú de la persona.
+- A la derecha: botón primario "Registrar situación" y las herramientas "Aa Letra" (tamaño de letra y contraste), Avisos, Ayuda y menú de la persona, con el nombre debajo del ícono.
+- Desde 1280 px. En menos, las secciones y "Registrar" pasan a la barra inferior.
 - Franja tejida de 8 px en su borde inferior.
 
-**Barra inferior (móvil)**
+**Barra inferior (tablet y móvil)**
 - Cinco espacios: Inicio, Situaciones, **Registrar** (botón central terracota de 64 px), Acuerdos y Familia. Ícono de 24 px y etiqueta de 16 px (`small`, el mínimo absoluto) siempre visibles.
 
 **Control "Aa" (HU41, HU42)**
@@ -280,7 +281,7 @@ AYLLU es **casi plano**. La profundidad viene del contraste entre crema y blanco
 **Prompts de ejemplo:**
 1. "Construye la tarjeta de situación de AYLLU según DESIGN.md: categoría Salud con ícono, etiqueta Importante en maíz con borde izquierdo de 6 px, título h3, autor y fecha, y estado 'Jorge todavía no la ha visto'. Toda la tarjeta es un enlace accesible."
 2. "Construye el detalle de situación con el hilo: lista ordenada de eventos con nodos de 20 px, línea de 3 px y nodos vacíos punteados para lo pendiente. Debajo, el campo de respuesta y el botón primario."
-3. "Construye la barra superior web con cuatro secciones (ícono y texto), el botón primario 'Registrar situación', el control Aa y la franja tejida inferior. En menos de 640 px, cambia a la barra inferior de cinco espacios."
+3. "Construye la barra superior web con cuatro secciones (ícono y texto), el botón primario 'Registrar situación', el control Aa y la franja tejida inferior. En menos de 1280 px, cambia a la barra inferior de cinco espacios."
 4. "Construye el flujo Registrar situación en 3 pasos con indicador de pasos, tarjetas de categoría, grabador de voz y transcripción editable, y modal de confirmación al final."
 
 ## Quick Start (CSS)

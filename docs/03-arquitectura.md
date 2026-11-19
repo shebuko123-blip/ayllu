@@ -62,11 +62,12 @@ Fuera del espacio familiar (antes de entrar):
 
 ## 3. Navegación
 
-### 3.1 Web y escritorio (≥ 1024 px): barra superior
+### 3.1 Escritorio (≥ 1280 px): barra superior de una fila
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────────┐
-│ [◆ ayllu]   ⌂ Inicio   ☰ Situaciones   ✎ Acuerdos   ☺ Familia   (+ Registrar situación)  Aa  🔔  ?  (RC▾) │
+│ [◆ ayllu]  ⌂ Inicio  ☰ Situaciones  ✎ Acuerdos  ☺ Familia  (+ Registrar situación)   Aa    🔔     ?     (R)  │
+│                                                                                 Letra Avisos Ayuda Rosa │
 ├▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲ franja tejida de 8 px ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲┤
 │                                                                                  │
 │                    contenido centrado · máximo 1120 px                           │
@@ -74,17 +75,18 @@ Fuera del espacio familiar (antes de entrar):
 
 - **Por qué arriba y no a la izquierda:** con solo 4 secciones, una barra horizontal muestra todo sin quitar ancho al contenido. Además es el patrón que la persona ya conoce de las webs informativas y se mantiene estable cuando la letra crece.
 - Sección activa: subrayado verde molle de 3 px y `aria-current="page"`.
-- Si con la letra "Muy grande" no caben los textos, las secciones pasan a una **segunda fila** de la barra; nunca se ocultan en un menú.
+- Las herramientas (Letra, Avisos, Ayuda y la persona) llevan **el nombre debajo del ícono** en todos los anchos: nunca íconos solos y ocupan la mitad del espacio.
+- **Por qué desde 1280 px:** con letra normal la barra completa necesita unos 1 280 px para caber en una fila. Más angosta, se usa la barra inferior (§3.2) en vez de partirla en dos filas, que se veía saturada.
+- Si con letra "Grande" o "Muy grande" no caben los textos, las secciones pasan a una **segunda fila**; nunca se ocultan en un menú. Es el único caso con dos filas en escritorio.
 
-### 3.2 Tablet (640–1023 px)
+### 3.2 Tablet, laptop pequeña y móvil (< 1280 px): barra superior simple + barra inferior
 
-Barra superior con logo, Aa, Avisos y menú de la persona; las 4 secciones en una segunda fila con ícono y texto. El botón "Registrar situación" queda fijo abajo a la derecha.
-
-### 3.3 Móvil (< 640 px): barra inferior
+Un solo esquema para todas las pantallas táctiles y las ventanas angostas. **Ningún ancho usa dos filas en la barra superior con letra normal.**
 
 ```
 ┌─────────────────────────────┐
-│ [◆ ayllu]        Aa   🔔  (RC) │  ← barra superior simple
+│ [◆ ayllu]   Aa   🔔   ?   (R) │  ← barra superior simple, una fila
+│           Letra Avisos Ayuda Rosa │
 ├─────────────────────────────┤
 │                             │
 │          contenido          │
@@ -95,7 +97,8 @@ Barra superior con logo, Aa, Avisos y menú de la persona; las 4 secciones en un
 └─────────────────────────────┘
 ```
 
-- **Cinco espacios:** las cuatro secciones y, al centro, el botón terracota "Registrar" de 64 px, la acción más importante al alcance del pulgar.
+- **Cinco espacios:** las cuatro secciones y, al centro, el botón terracota "Registrar" de 64 px, la acción más importante al alcance del pulgar. En tablet la barra inferior se limita a 640 px de ancho, centrada.
+- **Barra superior en una fila:** en menos de 432 px el logo muestra solo el símbolo ("ayllu" queda como nombre accesible). Con letra normal cabe desde 320 px, con "Grande" desde 360 px y con "Muy grande" desde 412 px; en pantallas más angostas las herramientas bajan a una segunda fila en vez de salirse de la pantalla.
 - Etiquetas de texto **siempre visibles**. Sin menú hamburguesa para las secciones.
 - Dentro de un flujo de pasos (Registrar), la barra inferior se oculta y aparecen "Atrás" y el botón del paso; así la persona no sale del flujo por accidente.
 
